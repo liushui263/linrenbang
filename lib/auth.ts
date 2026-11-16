@@ -35,8 +35,18 @@ export async function ensureUserRow(user: { id: string; email?: string | null; u
 }
 
 /** 把数据库错误翻译成站长/用户看得懂的话，同时把原始错误写进 Vercel 日志 */
-export function dbErrorMessage(where: string, error: { code?: string; message?: string; details?: string | null }): string {
-  console.error(`[${where}]`, error.code, error.message, error.details);
+export function dbErrorMessage(
+  where: string,
+  error: { code?: string; message?: string; details?: string | null; hint?: string | null },
+): string {
+  console.error(`[${where}]`, error.code, error.message, error.details, error.hint);
+  const msg = `${error.message ?? ""}`;
+  if (/invalid api key|jwt|apikey|unauthorized/i.test(msg)) {
+    return `网站的 Supabase key 配置不对（${where}）。站长请检查 Vercel 里的 SUPABASE_SERVICE_ROLE_KEY，然后重新部署`;
+  }
+  if (/fetch failed|network|ENOTFOUND|ECONNREFUSED/i.test(msg)) {
+    return `网站连不上 Supabase（${where}）。站长请检查 Vercel 里的 NEXT_PUBLIC_SUPABASE_URL`;
+  }
   switch (error.code) {
     case "23505":
       return "这条信息已经存在了（电话或账号重复）";
@@ -52,6 +62,7 @@ export function dbErrorMessage(where: string, error: { code?: string; message?: 
     case "42501":
       return "网站权限配置不对（站长请检查 SUPABASE_SERVICE_ROLE_KEY）";
     default:
-      return `提交失败，请稍后再试（错误代码 ${error.code ?? "未知"}）`;
+      // 没有错误代码的一般是连不上 Supabase 或者 key 不对，把原始信息也显示出来方便排查
+      return `提交失败（${where}：${error.code || "无代码"} ${(error.message ?? "").slice(0, 160)}）`;
   }
 }
