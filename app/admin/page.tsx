@@ -10,7 +10,7 @@ import {
   rejectClaim,
   resolveReport,
 } from "@/app/actions/admin";
-import { categoryName } from "@/constants/categories";
+import { providerCategoryLabel } from "@/constants/categories";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { formatUsPhone } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -52,10 +52,10 @@ export default async function AdminPage() {
   if (!isAdmin(user?.id)) notFound();
   const admin = createAdminClient();
 
-  const [providers, recs, reports, claims, foundingCount] = await Promise.all([
+  const [providers, recs, reports, claims, foundingCount, others] = await Promise.all([
     admin
       .from("providers")
-      .select("id, name, category, phone, wechat_id, service_areas, tagline, description, source, price_note, created_at")
+      .select("id, name, category, custom_service, phone, wechat_id, service_areas, tagline, description, source, price_note, created_at")
       .eq("status", "pending")
       .order("created_at"),
     admin
@@ -70,7 +70,17 @@ export default async function AdminPage() {
       .eq("status", "pending")
       .order("created_at"),
     admin.from("providers").select("id", { count: "exact", head: true }).not("founding_rank", "is", null),
+    admin.from("providers").select("custom_service").eq("category", "other").neq("status", "hidden"),
   ]);
+
+  // “其他服务”里哪些服务名出现得多，方便以后升级成正式分类
+  const otherCounts = Object.entries(
+    (others.data ?? []).reduce<Record<string, number>>((acc, r) => {
+      const k = (r.custom_service ?? "").trim();
+      if (k) acc[k] = (acc[k] ?? 0) + 1;
+      return acc;
+    }, {}),
+  ).sort((a, b) => b[1] - a[1]);
 
   const name = (x: unknown) => (x as { name?: string } | null)?.name ?? "";
 
@@ -81,6 +91,20 @@ export default async function AdminPage() {
         <p className="text-sm text-gray-500">创始名额已用 {foundingCount.count ?? 0} / 100</p>
       </div>
 
+      {otherCounts.length > 0 && (
+        <section className="rounded-2xl bg-white p-4 text-sm">
+          <h2 className="font-semibold">“其他服务”里的服务名（{others.data?.length ?? 0} 家）</h2>
+          <p className="mt-1 text-xs text-gray-500">出现多的可以考虑升级成正式分类。</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {otherCounts.map(([name, n]) => (
+              <span key={name} className="rounded-full bg-purple-50 px-2 py-0.5 text-purple-800">
+                {name} × {n}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section>
         <h2 className="mb-2 font-semibold">待审核商家（{providers.data?.length ?? 0}）</h2>
         <p className="mb-2 text-xs text-gray-500">标准：电话正常、店名/分类/片区填全、简介无乱码无其他平台链接、无明显虚假承诺、不是重复注册。</p>
@@ -88,7 +112,8 @@ export default async function AdminPage() {
           {providers.data?.map((p) => (
             <div key={p.id} className="rounded-2xl bg-white p-4 text-sm">
               <div className="font-semibold">
-                {p.name} · {categoryName(p.category)}
+                {p.name} · {providerCategoryLabel(p)}
+                {p.category === "other" && <span className="ml-2 rounded bg-purple-50 px-1.5 text-xs text-purple-700">其他服务</span>}
                 {p.source === "neighbor_submitted" && <span className="ml-2 text-xs text-blue-600">邻居代录入</span>}
               </div>
               <div className="text-gray-600">

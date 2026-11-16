@@ -5,7 +5,7 @@ import ProviderFields from "@/components/ProviderFields";
 import RecommendationFields from "@/components/RecommendationFields";
 import SubmitButton from "@/components/SubmitButton";
 import { submitNeighborProvider, submitRecommendation } from "@/app/actions/recommend";
-import { categoryName } from "@/constants/categories";
+import { providerCategoryLabel } from "@/constants/categories";
 import { getCurrentUser } from "@/lib/auth";
 import { getVisitorLocation } from "@/lib/location";
 import { getPublicProvider } from "@/lib/providers";
@@ -67,7 +67,7 @@ export default async function RecommendPage({ searchParams }: { searchParams: Pr
       <div className="space-y-4 py-6">
         <h1 className="text-xl font-bold">
           推荐 {p.name}
-          <span className="ml-2 text-sm font-normal text-gray-500">{categoryName(p.category)}</span>
+          <span className="ml-2 text-sm font-normal text-gray-500">{providerCategoryLabel(p)}</span>
         </h1>
         {!user ? (
           loginGate

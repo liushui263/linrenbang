@@ -5,7 +5,7 @@ import ContactButtons from "@/components/ContactButtons";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import ProviderCard from "@/components/ProviderCard";
 import ReportButton from "@/components/ReportButton";
-import { categoryName } from "@/constants/categories";
+import { providerCategoryLabel } from "@/constants/categories";
 import { getCurrentUser } from "@/lib/auth";
 import { getVisitorLocation } from "@/lib/location";
 import { getPublicProvider } from "@/lib/providers";
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const p = await getPublicProvider(id);
   if (!p) return { title: "没找到这个商家" };
-  const title = `邻居推荐：${p.name}（${categoryName(p.category)}）- 邻人帮`;
+  const title = `邻居推荐：${p.name}（${providerCategoryLabel(p)}）- 邻人帮`;
   const description = `${p.recommend_count}位邻居推荐 · 服务区域：${p.service_areas.join(" / ")}。${
     p.tagline || p.description?.slice(0, 50) || ""
   }`;
