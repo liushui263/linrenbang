@@ -6,7 +6,15 @@ import { dbErrorMessage, ensureUserRow, getCurrentUser } from "@/lib/auth";
 import { parseProviderForm, parseRecommendationForm } from "@/lib/provider-form";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export type FormState = { error?: string; ok?: string; fieldErrors?: Record<string, string> } | undefined;
+export type FormState =
+  | {
+      error?: string;
+      ok?: string;
+      fieldErrors?: Record<string, string>;
+      /** 字段错误下面附带的链接，如“去认领我的店” */
+      fieldLinks?: Record<string, { href: string; label: string }>;
+    }
+  | undefined;
 
 /** 7.3 邻居写推荐：pending，站长通过后展示；一人一商家一条，可编辑；商家不能推荐自己 */
 export async function submitRecommendation(_prev: FormState, fd: FormData): Promise<FormState> {
