@@ -1,11 +1,13 @@
-import { CATEGORIES, LANGUAGES } from "@/constants/categories";
+import { LANGUAGES } from "@/constants/categories";
 import { CITIES } from "@/constants/cities";
 import { FieldError } from "./ActionForm";
+import CategoryPicker from "./CategoryPicker";
 
 export interface ProviderDefaults {
   name?: string;
   phone?: string;
   category?: string;
+  custom_service?: string | null;
   city_id?: string;
   service_areas?: string[];
   wechat_id?: string | null;
@@ -44,20 +46,7 @@ export default function ProviderFields({
         <input name="name" required maxLength={60} defaultValue={d.name} className={input} placeholder="如：老王空调" />
         <FieldError name="name" />
       </div>
-      <div>
-        <label className={label}>主营分类 *</label>
-        <select name="category" required defaultValue={d.category ?? ""} className={input}>
-          <option value="" disabled>
-            选一个
-          </option>
-          {CATEGORIES.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.zh}
-            </option>
-          ))}
-        </select>
-        <FieldError name="category" />
-      </div>
+      <CategoryPicker category={d.category} customService={d.custom_service} />
       <div>
         <label className={label}>服务城市 *</label>
         <select name="city_id" defaultValue={city.id} className={input}>

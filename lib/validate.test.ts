@@ -28,6 +28,15 @@ describe("validateField", () => {
   });
 });
 
+describe("custom_service", () => {
+  it("is required only for the other category", () => {
+    expect(validateField("custom_service", fd({ category: "hvac" }))).toBeNull();
+    expect(validateField("custom_service", fd({ category: "other", custom_service: "" }))).toMatch(/具体做什么/);
+    expect(validateField("custom_service", fd({ category: "other", custom_service: "网站设计" }))).toBeNull();
+    expect(validateField("custom_service", fd({ category: "other", custom_service: "一二三四五六七八九十一二三" }))).toMatch(/12 个字/);
+  });
+});
+
 describe("validateForm", () => {
   it("collects all errors", () => {
     const errs = validateForm(fd({ name: "", phone: "1" }), ["name", "phone", "category"]);

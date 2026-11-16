@@ -103,11 +103,11 @@ export async function listProviders(f: ListFilters, excludeIds: string[] = []) {
   if (f.category) query = query.eq("category", f.category);
   if (f.area) query = query.contains("service_areas", [f.area]);
   if (f.q) {
-    // 只搜名字、标语、简介、标签；不支持按电话搜（防爬）
+    // 只搜名字、服务名、标语、简介、标签；不支持按电话搜（防爬）
     const term = f.q.replace(/[%,()*]/g, " ").trim().slice(0, 30);
     if (term) {
       query = query.or(
-        `name.ilike.%${term}%,tagline.ilike.%${term}%,description.ilike.%${term}%,sub_tags.cs.{"${term.replace(/"/g, "")}"}`,
+        `name.ilike.%${term}%,custom_service.ilike.%${term}%,tagline.ilike.%${term}%,description.ilike.%${term}%,sub_tags.cs.{"${term.replace(/"/g, "")}"}`,
       );
     }
   }

@@ -1,6 +1,6 @@
 -- 开发环境种子数据（生产环境不要跑！）
 -- 12 家商家覆盖 12 个分类，电话全部是 +171355501XX 虚构号段；4 条推荐；2 条轮换示例。
--- 跑之前先跑 migrations/0001_init.sql。
+-- 跑之前先按顺序跑 migrations/ 里的所有 SQL（0001、0002……）。
 
 -- 一个演示用户，用来挂推荐（只能在开发库这样建）
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
@@ -28,6 +28,11 @@ values
   -- 再加一家空调，演示同分类轮换池 > 2 时的轮换
   ('10000000-0000-0000-0000-000000000013', 'houston', 'seed', '赵记冷暖（演示）', 'hvac', '{暖气炉,风管清洗}', '{Katy}', '+17135550113', null, '{国语}', null, false, false, null, '演示数据。', 'active', true, 10, now() - interval '1 days', now() + interval '99 days', 2, now() - interval '1 days'),
   ('10000000-0000-0000-0000-000000000014', 'houston', 'seed', '钱师傅空调（演示）', 'hvac', '{窗机,分体机}', '{"Sugar Land"}', '+17135550114', 'demo_qian', '{国语}', null, false, false, null, '演示数据。', 'active', true, 11, now(), now() + interval '100 days', 3, now())
+on conflict (id) do nothing;
+
+-- “其他服务”示例（v3.3）
+insert into public.providers (id, city_id, source, name, category, custom_service, sub_tags, service_areas, phone, languages, tagline, description, status, category_rank, approved_at)
+values ('10000000-0000-0000-0000-000000000015', 'houston', 'seed', '小林建站（演示）', 'other', '网站设计', '{小店网站,微信小程序}', '{Katy,"Sugar Land"}', '+17135550115', '{国语,English}', '帮小商家做网站', '演示数据：“其他服务”分类示例。', 'active', 1, now())
 on conflict (id) do nothing;
 
 insert into public.recommendations (provider_id, user_id, recommender_area, service_item, cost_approx, comment, status)

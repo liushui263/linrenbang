@@ -7,7 +7,7 @@
 
 ## 第一次上线（站长照做即可）
 
-1. **Supabase**：新建项目 → SQL Editor 里整段运行 `supabase/migrations/0001_init.sql`。
+1. **Supabase**：新建项目 → SQL Editor 里**按编号顺序**整段运行 `supabase/migrations/` 下的每个文件（`0001_init.sql`、`0002_other_category.sql`……）。以后有新的编号文件，要在部署新代码**之前**先运行。
    - **生产库不要跑** `supabase/seed.sql`（那是开发用的 555 假号码）。
 2. **Google 登录**（v3 唯一的登录方式）：
    - Google Cloud Console → APIs & Services → Credentials → 新建 OAuth Client（Web），回调地址填 Supabase 给的 `https://<项目>.supabase.co/auth/v1/callback`。

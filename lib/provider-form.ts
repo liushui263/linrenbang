@@ -6,6 +6,7 @@ import { validateForm, type FieldErrors } from "@/lib/validate";
 export interface ProviderInput {
   name: string;
   category: string;
+  custom_service: string | null;
   city_id: string;
   service_areas: string[];
   phone: string;
@@ -34,6 +35,7 @@ export function parseProviderForm(
   const fieldErrors = validateForm(fd, [
     "name",
     "category",
+    "custom_service",
     "service_areas",
     ...(includePhone ? ["phone"] : []),
     "wechat_id",
@@ -71,6 +73,7 @@ export function parseProviderForm(
     data: {
       name,
       category,
+      custom_service: category === "other" ? str(fd, "custom_service", 12) : null,
       city_id,
       service_areas,
       phone,

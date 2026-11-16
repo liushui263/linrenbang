@@ -12,6 +12,13 @@ export function validateField(name: string, fd: FormData): string | null {
       return v("name") ? null : "请填写店名或称呼";
     case "category":
       return v("category") ? null : "请选择主营分类";
+    case "custom_service": {
+      if (v("category") !== "other") return null;
+      const c = v("custom_service");
+      if (c.length < 2) return "选了“其他服务”，请写一下具体做什么（2-12 个字，如：网站设计）";
+      if (c.length > 12) return "服务名请控制在 12 个字以内";
+      return LINK.test(c) ? "服务名里不要放网址" : null;
+    }
     case "service_areas":
       return fd.getAll("service_areas").length > 0 ? null : "请至少选一个覆盖片区";
     case "phone":
