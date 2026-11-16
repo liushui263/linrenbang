@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { saveZip } from "@/app/actions/location";
 
 const LS_KEY = "lrb_zip";
@@ -57,13 +58,32 @@ export default function ZipGate({ open, currentZip, onClose, restore = false }: 
     });
   }
 
-  if (!visible) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/95 px-6 backdrop-blur">
-      <div className="w-full max-w-sm text-center">
+  // 弹窗打开时锁住背后页面的滚动
+  useEffect(() => {
+    if (!visible) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [visible]);
+
+  if (!visible || !mounted) return null;
+
+  // 必须挂到 <body> 上：顶部栏有 backdrop-blur，会让里面的 position:fixed 只盖住顶部栏那一条
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="zip-gate-title"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/40 px-4 backdrop-blur-sm"
+    >
+      <div className="w-full max-w-sm rounded-3xl bg-white px-6 py-8 text-center shadow-2xl">
         <div className="text-4xl">🏘️</div>
-        <h2 className="mt-3 text-xl font-bold text-gray-900">输入你的 Zip Code</h2>
+        <h2 id="zip-gate-title" className="mt-3 text-xl font-bold text-gray-900">输入你的 Zip Code</h2>
         <p className="mt-2 text-sm text-gray-600">看看你附近的邻居推荐了谁</p>
         <form
           className="mt-6 flex gap-2"
@@ -80,7 +100,7 @@ export default function ZipGate({ open, currentZip, onClose, restore = false }: 
             value={zip}
             onChange={(e) => setZip(e.target.value.replace(/\D/g, ""))}
             placeholder="例如 77077"
-            className="flex-1 rounded-xl border border-gray-300 px-4 py-3 text-center text-lg tracking-widest outline-none focus:border-emerald-600"
+            className="min-w-0 flex-1 rounded-xl border border-gray-300 px-4 py-3 text-center text-lg tracking-widest outline-none focus:border-emerald-600"
           />
           <button
             type="submit"
@@ -105,6 +125,7 @@ export default function ZipGate({ open, currentZip, onClose, restore = false }: 
           {onClose ? "取消" : "跳过，先看休斯顿"}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
