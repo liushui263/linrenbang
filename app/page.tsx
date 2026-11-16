@@ -49,7 +49,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>
       )}
 
-      <section className="hero-bg relative -mx-4 overflow-hidden px-5 pb-5 pt-6 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:px-7 sm:pt-8">
+      <section className="hero-bg relative -mx-4 overflow-hidden px-5 pb-5 pt-4 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:px-7 sm:pt-6">
         {/* 底部的一排屋顶剪影 */}
         <svg
           aria-hidden="true"
@@ -63,14 +63,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           />
         </svg>
         <div className="relative">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">{SITE_SLOGAN_EN}</p>
-          <h1 className="mt-1 flex flex-wrap items-baseline gap-x-3">
-            <span className="text-4xl font-black tracking-wide drop-shadow-sm sm:text-5xl">{SITE_NAME}</span>
-            <span className="text-lg font-semibold text-emerald-50/90 sm:text-xl">{SITE_NAME_EN}</span>
+          <h1 className="sr-only">
+            {SITE_NAME} {SITE_NAME_EN} · {SITE_SLOGAN_EN}
           </h1>
-          <p className="mt-2 text-base font-medium text-white sm:text-lg">找靠谱的华人服务，先看邻居推荐，再打电话</p>
+          <p className="text-base font-bold text-white drop-shadow-sm sm:text-xl">找靠谱的华人服务，先看邻居推荐，再打电话</p>
           <p className="mt-1 text-xs text-emerald-100">
-            📍 {loc.city.zh} {loc.city.en} · 邻居真实推荐，不刷星、不收广告费
+            📍 {loc.city.zh} {loc.city.en} · 邻居真实推荐，不刷星，不排名，靠真诚，靠声誉
           </p>
         </div>
         <form action="/" className="relative mt-4 flex gap-2">
