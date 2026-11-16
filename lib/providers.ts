@@ -1,0 +1,143 @@
+import "server-only";
+import { after } from "next/server";
+import { CATEGORY_IDS } from "@/constants/categories";
+import { PAGE_SIZE, ROTATION_POOL_PER_CATEGORY } from "@/constants/site";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { chicagoDateString, chicagoDayBounds, dayIndexFor, pickDailyRotation, pickHomeRotation } from "@/lib/rotation";
+import { PUBLIC_PROVIDER_COLUMNS, type PublicProvider } from "@/lib/types";
+
+export interface ListFilters {
+  cityId: string;
+  category?: string;
+  area?: string;
+  q?: string;
+  page?: number;
+}
+
+/** 某城市某分类的轮换池：active、创始有效期内、通过最早的 10 家（paused 自动退出） */
+async function rotationPool(cityId: string, category: string): Promise<PublicProvider[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("providers")
+    .select(PUBLIC_PROVIDER_COLUMNS)
+    .eq("city_id", cityId)
+    .eq("category", category)
+    .eq("status", "active")
+    .gt("founding_expires_at", new Date().toISOString())
+    .order("founding_started_at", { ascending: true })
+    .limit(ROTATION_POOL_PER_CATEGORY);
+  return (data ?? []) as unknown as PublicProvider[];
+}
+
+/** 今日轮换：传 category 返回该分类的 2 家；不传返回首页的 2 家 */
+export async function getTodayRotation(cityId: string, category?: string): Promise<PublicProvider[]> {
+  const date = chicagoDateString();
+  const dayIndex = dayIndexFor(date);
+
+  if (category) {
+    const picked = pickDailyRotation(await rotationPool(cityId, category), dayIndex);
+    recordRotationLazily(cityId, "category_rotation", category, picked, date);
+    return picked;
+  }
+
+  const perCategory = await Promise.all(
+    CATEGORY_IDS.map(async (c) => pickDailyRotation(await rotationPool(cityId, c), dayIndex)),
+  );
+  const picked = pickHomeRotation(perCategory, dayIndex);
+  recordRotationLazily(cityId, "home_rotation", null, picked, date);
+  return picked;
+}
+
+/** 13.1 第 5 步：当天第一次请求时顺带写 ad_placements（响应发出后再写，不拖慢页面） */
+function recordRotationLazily(
+  cityId: string,
+  slotType: "home_rotation" | "category_rotation",
+  category: string | null,
+  picked: PublicProvider[],
+  date: string,
+) {
+  if (picked.length === 0 || !process.env.SUPABASE_SERVICE_ROLE_KEY) return;
+  after(async () => {
+    try {
+      const admin = createAdminClient();
+      let check = admin
+        .from("ad_placements")
+        .select("id", { count: "exact", head: true })
+        .eq("city_id", cityId)
+        .eq("slot_type", slotType)
+        .eq("rotation_date", date);
+      check = category ? check.eq("category", category) : check.is("category", null);
+      const { count } = await check;
+      if (count && count > 0) return;
+      const { start, end } = chicagoDayBounds(date);
+      // 并发时可能两个请求都走到这里，唯一索引会挡住重复，忽略冲突错误即可
+      await admin.from("ad_placements").insert(
+        picked.map((p) => ({
+          provider_id: p.id,
+          city_id: cityId,
+          slot_type: slotType,
+          category,
+          rotation_date: date,
+          start_at: start,
+          end_at: end,
+          is_free_grant: true,
+          amount_cents: 0,
+        })),
+      );
+    } catch (e) {
+      console.error("rotation lazy write failed", e);
+    }
+  });
+}
+
+/** 列表：轮换之后按推荐数降序 → 创建时间降序，每页 20 条 */
+export async function listProviders(f: ListFilters, excludeIds: string[] = []) {
+  const supabase = await createClient();
+  const page = Math.max(1, f.page ?? 1);
+  let query = supabase
+    .from("providers")
+    .select(PUBLIC_PROVIDER_COLUMNS, { count: "exact" })
+    .eq("city_id", f.cityId)
+    .in("status", ["active", "paused"]);
+  if (f.category) query = query.eq("category", f.category);
+  if (f.area) query = query.contains("service_areas", [f.area]);
+  if (f.q) {
+    // 只搜名字、标语、简介、标签；不支持按电话搜（防爬）
+    const term = f.q.replace(/[%,()*]/g, " ").trim().slice(0, 30);
+    if (term) {
+      query = query.or(
+        `name.ilike.%${term}%,tagline.ilike.%${term}%,description.ilike.%${term}%,sub_tags.cs.{"${term.replace(/"/g, "")}"}`,
+      );
+    }
+  }
+  if (excludeIds.length) query = query.not("id", "in", `(${excludeIds.join(",")})`);
+  const from = (page - 1) * PAGE_SIZE;
+  const { data, count } = await query
+    .order("recommend_count", { ascending: false })
+    .order("created_at", { ascending: false })
+    .range(from, from + PAGE_SIZE - 1);
+  return {
+    providers: (data ?? []) as unknown as PublicProvider[],
+    total: count ?? 0,
+    page,
+    pageCount: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)),
+  };
+}
+
+export async function getPublicProvider(id: string): Promise<PublicProvider | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.from("providers").select(PUBLIC_PROVIDER_COLUMNS).eq("id", id).maybeSingle();
+  return (data as unknown as PublicProvider) ?? null;
+}
+
+/** 创始名额还剩几个（第 101 名起不再发） */
+export async function foundingSlotsLeft(): Promise<number> {
+  const { FOUNDING_SLOTS } = await import("@/constants/site");
+  const { count } = await createAdminClient()
+    .from("providers")
+    .select("id", { count: "exact", head: true })
+    .not("founding_rank", "is", null);
+  return Math.max(0, FOUNDING_SLOTS - (count ?? 0));
+}

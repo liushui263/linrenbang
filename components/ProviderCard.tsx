@@ -1,0 +1,84 @@
+import Link from "next/link";
+import { categoryName } from "@/constants/categories";
+import { foundingDaysLeft, isFoundingActive } from "@/lib/rotation";
+import type { PublicProvider } from "@/lib/types";
+import ContactButtons from "./ContactButtons";
+
+interface Props {
+  provider: PublicProvider;
+  isTodayPick?: boolean;
+  expanded?: boolean; // 详情页的展开版
+}
+
+/** 第 8 节名片版式：一个组件，列表和详情页复用 */
+export default function ProviderCard({ provider: p, isTodayPick, expanded }: Props) {
+  const founding = isFoundingActive(p.founding_expires_at);
+  const summary = p.tagline || (p.description ? p.description.slice(0, 60) : "");
+  const tags = expanded ? p.sub_tags : p.sub_tags.slice(0, 3);
+
+  const head = (
+    <>
+      {/* 1. 头像 + 名字 + 分类徽章 */}
+      <div className="flex items-center gap-3">
+        {p.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.avatar_url} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-700">
+            {p.name.slice(0, 1)}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-lg font-bold text-gray-900">{p.name}</h3>
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{categoryName(p.category)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. 推荐数 + 角标 + 执照文案 */}
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+        <span className="font-semibold text-orange-600">🔥 {p.recommend_count}位邻居推荐</span>
+        {founding && p.founding_rank && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+            创始商家 #{p.founding_rank} · 还剩 {foundingDaysLeft(p.founding_expires_at)} 天
+          </span>
+        )}
+        {isTodayPick && (
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">今日推荐</span>
+        )}
+        {p.is_licensed && <span className="text-xs text-gray-400">自称有执照 · 未经核实</span>}
+      </div>
+
+      {/* 3. 一句话标语 */}
+      {summary && <p className="mt-2 text-sm text-gray-700">{summary}</p>}
+
+      {/* 4. 技能标签 */}
+      {tags.length > 0 && <p className="mt-1 text-sm text-gray-500">{tags.join(" · ")}</p>}
+
+      {/* 5. 服务片区 / 语言 / 急修 */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+        {p.service_areas.length > 0 && <span>服务：{p.service_areas.join(", ")}</span>}
+        {p.languages.length > 0 && <span>语言：{p.languages.join("、")}</span>}
+        {p.emergency_24h && <span className="rounded bg-red-50 px-1.5 py-0.5 font-medium text-red-600">24h 急修</span>}
+      </div>
+
+      {/* 6. 收费提示 */}
+      {p.price_note && <p className="mt-1 text-xs text-gray-400">{p.price_note}</p>}
+    </>
+  );
+
+  return (
+    <article className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      {expanded ? head : (
+        <Link href={`/provider/${p.id}`} className="block">
+          {head}
+        </Link>
+      )}
+      {/* 7. 底部双按钮 */}
+      <div className="mt-3">
+        <ContactButtons providerId={p.id} hasWechat={p.has_wechat} paused={p.status === "paused"} />
+      </div>
+    </article>
+  );
+}
