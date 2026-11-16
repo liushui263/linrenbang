@@ -67,8 +67,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             {SITE_NAME} {SITE_NAME_EN} · {SITE_SLOGAN_EN}
           </h1>
           <p className="text-base font-bold text-white drop-shadow-sm sm:text-xl">找靠谱的华人服务，先看邻居推荐，再打电话</p>
-          <p className="mt-1 text-xs text-emerald-100">
-            📍 {loc.city.zh} {loc.city.en} · 邻居真实推荐，不刷星，不排名，靠真诚，靠声誉
+          <p className="mt-1 whitespace-nowrap text-[min(11px,3.25vw)] tracking-tight text-emerald-100 sm:text-xs sm:tracking-normal">
+            📍 {loc.city.zh}
+            <span className="hidden sm:inline"> {loc.city.en}</span> · 邻居真实推荐，不刷星，不排名，靠真诚，靠声誉
           </p>
         </div>
         <form action="/" className="relative mt-4 flex gap-2">
