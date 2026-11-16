@@ -1,5 +1,6 @@
 export const SITE_NAME = "邻人帮";
 export const SITE_NAME_EN = "Linren Bang";
+export const SITE_SLOGAN_EN = "My Neighborhood Helpers";
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://linrenbang.com";
 
 export const FOUNDING_SLOTS = 100; // 前 100 名创始商家
