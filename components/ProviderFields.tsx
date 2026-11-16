@@ -1,5 +1,6 @@
 import { CATEGORIES, LANGUAGES } from "@/constants/categories";
 import { CITIES } from "@/constants/cities";
+import { FieldError } from "./ActionForm";
 
 export interface ProviderDefaults {
   name?: string;
@@ -41,6 +42,7 @@ export default function ProviderFields({
       <div>
         <label className={label}>店名 / 称呼 *</label>
         <input name="name" required maxLength={60} defaultValue={d.name} className={input} placeholder="如：老王空调" />
+        <FieldError name="name" />
       </div>
       <div>
         <label className={label}>主营分类 *</label>
@@ -54,6 +56,7 @@ export default function ProviderFields({
             </option>
           ))}
         </select>
+        <FieldError name="category" />
       </div>
       <div>
         <label className={label}>服务城市 *</label>
@@ -76,22 +79,27 @@ export default function ProviderFields({
           ))}
         </div>
       </fieldset>
+      <FieldError name="service_areas" />
       {showPhone && (
         <div>
           <label className={label}>电话 *</label>
           <input name="phone" required inputMode="tel" defaultValue={d.phone} className={input} placeholder="(713) 555-0123" />
+          <FieldError name="phone" />
           <p className="mt-1 text-xs text-gray-500">一个号码只能对应一个商家。提交后要改号请联系站长。</p>
         </div>
       )}
       <div>
         <label className={label}>微信号（选填）</label>
+        <p className="text-xs text-gray-500">6-20 位、字母开头；或者填能搜到你的手机号</p>
         <input name="wechat_id" maxLength={60} defaultValue={d.wechat_id ?? ""} className={input} />
+        <FieldError name="wechat_id" />
       </div>
       {!minimal && (
         <>
           <div>
             <label className={label}>一句话标语（选填，60 字内）</label>
             <input name="tagline" maxLength={60} defaultValue={d.tagline ?? ""} className={input} placeholder="如：15 年中央空调，Katy 很多家都是我装的" />
+            <FieldError name="tagline" />
           </div>
           <div>
             <label className={label}>技能标签（最多 6 个，用逗号或空格隔开）</label>
@@ -127,6 +135,7 @@ export default function ProviderFields({
           <div>
             <label className={label}>简介（选填，300 字内，不要放其他网站链接）</label>
             <textarea name="description" maxLength={300} rows={4} defaultValue={d.description ?? ""} className={input} />
+            <FieldError name="description" />
           </div>
         </>
       )}

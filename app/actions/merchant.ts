@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getCurrentUser } from "@/lib/auth";
+import { dbErrorMessage, ensureUserRow, getCurrentUser } from "@/lib/auth";
+import { validateForm } from "@/lib/validate";
 import { toE164 } from "@/lib/phone";
 import { parseProviderForm } from "@/lib/provider-form";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -18,12 +19,21 @@ export async function registerMerchant(_prev: FormState, fd: FormData): Promise<
   if (existing) return { error: "这个账号已经有一个商家了，一个账号只能注册一个商家" };
 
   const parsed = parseProviderForm(fd, true);
-  if (!parsed.data) return { error: parsed.error };
+  if (!parsed.data) return { error: parsed.error, fieldErrors: parsed.fieldErrors };
+
+  // 电话重复先查一下，直接提示在电话那一栏
+  const { data: dup } = await admin.from("providers").select("id").eq("phone", parsed.data.phone).maybeSingle();
+  if (dup) {
+    return { fieldErrors: { phone: "这个电话已经登记过了。如果是邻居帮你登记的，请去“认领我的店”。" } };
+  }
+
+  const userErr = await ensureUserRow(user);
+  if (userErr) return { error: dbErrorMessage("registerMerchant.ensureUser", userErr) };
 
   const avatar = await uploadImage(fd.get("avatar"), "avatars", user.id);
-  if (avatar.error) return { error: avatar.error };
+  if (avatar.error) return { fieldErrors: { avatar: avatar.error } };
   const license = await uploadImage(fd.get("license_photo"), "licenses", user.id);
-  if (license.error) return { error: license.error };
+  if (license.error) return { fieldErrors: { license_photo: license.error } };
 
   const { error } = await admin.from("providers").insert({
     ...parsed.data,
@@ -38,9 +48,9 @@ export async function registerMerchant(_prev: FormState, fd: FormData): Promise<
   });
   if (error) {
     if (error.code === "23505") {
-      return { error: "这个电话已经登记过了。如果是你的店被邻居代录入了，请去“认领我的店”。" };
+      return { fieldErrors: { phone: "这个电话已经登记过了。如果是邻居帮你登记的，请去“认领我的店”。" } };
     }
-    return { error: "提交失败，请稍后再试" };
+    return { error: dbErrorMessage("registerMerchant", error) };
   }
   redirect("/merchant/register?submitted=1");
 }
@@ -53,14 +63,14 @@ export async function updateMerchant(_prev: FormState, fd: FormData): Promise<Fo
   const { data: mine } = await admin.from("providers").select("id, status").eq("owner_user_id", user.id).maybeSingle();
   if (!mine) return { error: "没找到你的商家" };
   const parsed = parseProviderForm(fd, false);
-  if (!parsed.data) return { error: parsed.error };
+  if (!parsed.data) return { error: parsed.error, fieldErrors: parsed.fieldErrors };
   const { phone: _phone, ...rest } = parsed.data;
   void _phone;
 
   const avatar = await uploadImage(fd.get("avatar"), "avatars", user.id);
-  if (avatar.error) return { error: avatar.error };
+  if (avatar.error) return { fieldErrors: { avatar: avatar.error } };
   const license = await uploadImage(fd.get("license_photo"), "licenses", user.id);
-  if (license.error) return { error: license.error };
+  if (license.error) return { fieldErrors: { license_photo: license.error } };
 
   const update: Record<string, unknown> = { ...rest };
   if (avatar.value) update.avatar_url = avatar.value;
@@ -69,7 +79,7 @@ export async function updateMerchant(_prev: FormState, fd: FormData): Promise<Fo
     update.license_status = "doc_uploaded";
   }
   const { error } = await admin.from("providers").update(update).eq("id", mine.id);
-  if (error) return { error: "保存失败，请稍后再试" };
+  if (error) return { error: dbErrorMessage("updateMerchant", error) };
   revalidatePath("/merchant");
   revalidatePath(`/provider/${mine.id}`);
   return { ok: "已保存" };
@@ -96,7 +106,10 @@ export async function requestTakedown(_prev: FormState, fd: FormData): Promise<F
   const { data: mine } = await admin.from("providers").select("id").eq("owner_user_id", user.id).maybeSingle();
   if (!mine) return { error: "没找到你的商家" };
   const reason = String(fd.get("reason") ?? "").trim().slice(0, 300) || "商家本人申请下架";
-  await admin.from("reports").insert({ target_type: "provider", target_id: mine.id, kind: "takedown", reason, reporter_user_id: user.id });
+  const { error } = await admin
+    .from("reports")
+    .insert({ target_type: "provider", target_id: mine.id, kind: "takedown", reason, reporter_user_id: user.id });
+  if (error) return { error: dbErrorMessage("requestTakedown", error) };
   return { ok: "已提交下架申请，站长核实后处理" };
 }
 
@@ -104,21 +117,22 @@ export async function requestTakedown(_prev: FormState, fd: FormData): Promise<F
 export async function requestClaim(_prev: FormState, fd: FormData): Promise<FormState> {
   const user = await getCurrentUser();
   if (!user) return { error: "请先用 Google 登录" };
-  const phone = toE164(String(fd.get("phone") ?? ""));
-  if (!phone) return { error: "电话格式不对" };
+  const fieldErrors = validateForm(fd, ["phone", "contact_note"]);
+  if (Object.keys(fieldErrors).length) return { fieldErrors };
+  const phone = toE164(String(fd.get("phone") ?? ""))!;
   const note = String(fd.get("contact_note") ?? "").trim().slice(0, 200);
-  if (note.length < 2) return { error: "请留一个站长能联系到你的方式（微信号或方便的时间）" };
+  await ensureUserRow(user);
 
   const admin = createAdminClient();
   const { data: owned } = await admin.from("providers").select("id").eq("owner_user_id", user.id).maybeSingle();
   if (owned) return { error: "这个账号已经有一个商家了" };
   const { data: p } = await admin.from("providers").select("id, owner_user_id").eq("phone", phone).maybeSingle();
-  if (!p) return { error: "没找到这个电话登记的店。没登记过的话，直接去“商家免费注册”。" };
+  if (!p) return { fieldErrors: { phone: "没找到这个电话登记的店。没登记过的话，直接去“商家免费注册”。" } };
   if (p.owner_user_id) return { error: "这家店已经被认领了。如果有误，请举报/纠错或联系站长。" };
 
   const { error } = await admin
     .from("claim_requests")
     .upsert({ provider_id: p.id, user_id: user.id, contact_note: note, status: "pending" }, { onConflict: "provider_id,user_id" });
-  if (error) return { error: "提交失败，请稍后再试" };
+  if (error) return { error: dbErrorMessage("requestClaim", error) };
   return { ok: "已提交认领申请。站长会通过电话或微信跟你核实，一般 24 小时内处理。" };
 }

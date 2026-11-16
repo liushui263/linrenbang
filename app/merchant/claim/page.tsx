@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requestClaim } from "@/app/actions/merchant";
-import ActionForm from "@/components/ActionForm";
+import ActionForm, { FieldError } from "@/components/ActionForm";
 import SubmitButton from "@/components/SubmitButton";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -25,6 +25,7 @@ export default async function ClaimPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700">店的电话 *</label>
             <input name="phone" required inputMode="tel" className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2" />
+            <FieldError name="phone" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">站长怎么联系你核实 *</label>
@@ -35,6 +36,7 @@ export default async function ClaimPage() {
               placeholder="如：微信 laowang123，晚上 7 点后方便"
               className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2"
             />
+            <FieldError name="contact_note" />
           </div>
           <SubmitButton>提交认领申请</SubmitButton>
         </ActionForm>
