@@ -3,6 +3,7 @@ import AreaSelect from "@/components/AreaSelect";
 import ProviderCard from "@/components/ProviderCard";
 import WaitlistForm from "@/components/WaitlistForm";
 import { CATEGORIES, CATEGORY_IDS, categoryName } from "@/constants/categories";
+import { SITE_NAME, SITE_NAME_EN, SITE_SLOGAN_EN } from "@/constants/site";
 import { getVisitorLocation } from "@/lib/location";
 import { getTodayRotation, listProviders } from "@/lib/providers";
 
@@ -36,7 +37,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const label = category ? categoryName(category) : q ? `“${q}”` : "师傅";
 
   return (
-    <div className="space-y-5 pt-4">
+    <div className="space-y-5 sm:pt-4">
       {loc.zip && !loc.zipCity && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <p>
@@ -48,22 +49,44 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>
       )}
 
-      <section>
-        <h1 className="text-xl font-bold text-gray-900">找靠谱的华人服务，先看邻居推荐，再打电话</h1>
-        <form action="/" className="mt-3 flex gap-2">
+      <section className="hero-bg relative -mx-4 overflow-hidden px-5 pb-5 pt-6 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:px-7 sm:pt-8">
+        {/* 底部的一排屋顶剪影 */}
+        <svg
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-10 w-full text-white/10"
+          viewBox="0 0 400 40"
+          preserveAspectRatio="none"
+        >
+          <path
+            fill="currentColor"
+            d="M0 40 V28 L20 14 L40 28 V22 L62 6 L84 22 V30 L100 18 L116 30 V24 L140 8 L164 24 V32 L180 20 L196 32 V26 L220 10 L244 26 V30 L262 16 L280 30 V22 L304 6 L328 22 V30 L346 18 L364 30 V24 L382 12 L400 24 V40 Z"
+          />
+        </svg>
+        <div className="relative">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">{SITE_SLOGAN_EN}</p>
+          <h1 className="mt-1 flex flex-wrap items-baseline gap-x-3">
+            <span className="text-4xl font-black tracking-wide drop-shadow-sm sm:text-5xl">{SITE_NAME}</span>
+            <span className="text-lg font-semibold text-emerald-50/90 sm:text-xl">{SITE_NAME_EN}</span>
+          </h1>
+          <p className="mt-2 text-base font-medium text-white sm:text-lg">找靠谱的华人服务，先看邻居推荐，再打电话</p>
+          <p className="mt-1 text-xs text-emerald-100">
+            📍 {loc.city.zh} {loc.city.en} · 邻居真实推荐，不刷星、不收广告费
+          </p>
+        </div>
+        <form action="/" className="relative mt-4 flex gap-2">
           {category && <input type="hidden" name="category" value={category} />}
           <input
             name="q"
             defaultValue={q}
             placeholder="搜师傅、店名、技能，如：换热水器"
-            className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2"
+            className="min-w-0 flex-1 rounded-xl border-0 bg-white px-4 py-2.5 text-gray-900 shadow-sm outline-none ring-2 ring-transparent focus:ring-amber-300"
           />
-          <button className="rounded-xl bg-emerald-600 px-4 py-2 text-white">搜索</button>
+          <button className="rounded-xl bg-amber-400 px-4 py-2.5 font-semibold text-emerald-950 shadow-sm active:bg-amber-500">搜索</button>
         </form>
-        <div className="mt-2 flex items-center gap-2">
+        <div className="relative mt-2 flex items-center gap-2 text-gray-900">
           <AreaSelect areas={loc.city.areas} value={loc.area} />
           {(category || q) && (
-            <Link href="/" className="text-sm text-gray-500 underline">
+            <Link href="/" className="text-sm text-emerald-50 underline">
               清除筛选
             </Link>
           )}
