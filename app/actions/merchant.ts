@@ -30,10 +30,9 @@ export async function registerMerchant(_prev: FormState, fd: FormData): Promise<
   const userErr = await ensureUserRow(user);
   if (userErr) return { error: dbErrorMessage("registerMerchant.ensureUser", userErr) };
 
+  // 图片是选填：没选就完全不碰存储；传失败也不挡注册，先不带图片提交，之后可在“我的名片”里补传
   const avatar = await uploadImage(fd.get("avatar"), "avatars", user.id);
-  if (avatar.error) return { fieldErrors: { avatar: avatar.error } };
   const license = await uploadImage(fd.get("license_photo"), "licenses", user.id);
-  if (license.error) return { fieldErrors: { license_photo: license.error } };
 
   const { error } = await admin.from("providers").insert({
     ...parsed.data,
@@ -68,9 +67,7 @@ export async function updateMerchant(_prev: FormState, fd: FormData): Promise<Fo
   void _phone;
 
   const avatar = await uploadImage(fd.get("avatar"), "avatars", user.id);
-  if (avatar.error) return { fieldErrors: { avatar: avatar.error } };
   const license = await uploadImage(fd.get("license_photo"), "licenses", user.id);
-  if (license.error) return { fieldErrors: { license_photo: license.error } };
 
   const update: Record<string, unknown> = { ...rest };
   if (avatar.value) update.avatar_url = avatar.value;
@@ -82,7 +79,8 @@ export async function updateMerchant(_prev: FormState, fd: FormData): Promise<Fo
   if (error) return { error: dbErrorMessage("updateMerchant", error) };
   revalidatePath("/merchant");
   revalidatePath(`/provider/${mine.id}`);
-  return { ok: "已保存" };
+  const imgErr = avatar.error || license.error;
+  return { ok: imgErr ? `已保存，但图片没传上（${imgErr}），其他内容已更新` : "已保存" };
 }
 
 /** 13.3 一键切换“近期排期已满 · 暂停接单” */
