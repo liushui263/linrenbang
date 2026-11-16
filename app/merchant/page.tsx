@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requestTakedown, updateMerchant } from "@/app/actions/merchant";
-import ActionForm from "@/components/ActionForm";
+import ActionForm, { FieldError } from "@/components/ActionForm";
 import ProviderCard from "@/components/ProviderCard";
 import ProviderFields from "@/components/ProviderFields";
 import SubmitButton from "@/components/SubmitButton";
@@ -121,10 +121,12 @@ export default async function MerchantPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700">换头像（选填）</label>
             <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" className="mt-1 text-sm" />
+            <FieldError name="avatar" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">上传执照照片（选填）</label>
             <input type="file" name="license_photo" accept="image/jpeg,image/png,image/webp" className="mt-1 text-sm" />
+            <FieldError name="license_photo" />
           </div>
           <SubmitButton>保存</SubmitButton>
         </ActionForm>

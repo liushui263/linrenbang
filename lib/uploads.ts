@@ -13,11 +13,14 @@ export async function uploadImage(
   if (!file || typeof file === "string" || file.size === 0) return {};
   if (file.size > MAX_BYTES) return { error: "图片不能超过 5MB" };
   const ext = TYPES[file.type];
-  if (!ext) return { error: "图片只支持 JPG / PNG / WebP" };
+  if (!ext) return { error: "图片只支持 JPG / PNG / WebP（iPhone 的 HEIC 请先截图或转成 JPG）" };
   const path = `${ownerId}/${Date.now()}.${ext}`;
   const admin = createAdminClient();
   const { error } = await admin.storage.from(bucket).upload(path, file, { contentType: file.type, upsert: false });
-  if (error) return { error: "图片上传失败，请稍后再试" };
+  if (error) {
+    console.error("[uploadImage]", bucket, error.message);
+    return { error: "图片上传失败，请稍后再试，或者先不传图片" };
+  }
   if (bucket === "avatars") return { value: admin.storage.from(bucket).getPublicUrl(path).data.publicUrl };
   return { value: path };
 }

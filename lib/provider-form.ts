@@ -1,6 +1,7 @@
 import { CATEGORY_IDS, LANGUAGES } from "@/constants/categories";
 import { CITIES } from "@/constants/cities";
 import { toE164 } from "@/lib/phone";
+import { validateForm, type FieldErrors } from "@/lib/validate";
 
 export interface ProviderInput {
   name: string;
@@ -26,7 +27,20 @@ const str = (fd: FormData, k: string, max: number) => {
 };
 
 /** 解析并校验商家表单（注册 / 代录入 / 编辑共用）。includePhone=false 用于编辑（电话不可改） */
-export function parseProviderForm(fd: FormData, includePhone = true): { data?: ProviderInput; error?: string } {
+export function parseProviderForm(
+  fd: FormData,
+  includePhone = true,
+): { data?: ProviderInput; error?: string; fieldErrors?: FieldErrors } {
+  const fieldErrors = validateForm(fd, [
+    "name",
+    "category",
+    "service_areas",
+    ...(includePhone ? ["phone"] : []),
+    "wechat_id",
+    "tagline",
+    "description",
+  ]);
+  if (Object.keys(fieldErrors).length) return { error: "有几项需要改一下，见红字", fieldErrors };
   const name = str(fd, "name", 60);
   if (!name) return { error: "请填写店名/称呼" };
   const category = String(fd.get("category") ?? "");
@@ -51,9 +65,7 @@ export function parseProviderForm(fd: FormData, includePhone = true): { data?: P
     .slice(0, 6);
   const languages = fd.getAll("languages").map(String).filter((l) => LANGUAGES.includes(l));
   const wechat = str(fd, "wechat_id", 60);
-  if (wechat && !/^[A-Za-z0-9_\-]{4,60}$/.test(wechat)) return { error: "微信号只能是字母、数字、下划线或横线" };
   const description = str(fd, "description", 300);
-  if (description && /(https?:\/\/|www\.)/i.test(description)) return { error: "简介里不要放网址链接" };
 
   return {
     data: {
@@ -83,7 +95,9 @@ export interface RecommendationInput {
   comment: string;
 }
 
-export function parseRecommendationForm(fd: FormData): { data?: RecommendationInput; error?: string } {
+export function parseRecommendationForm(fd: FormData): { data?: RecommendationInput; error?: string; fieldErrors?: FieldErrors } {
+  const fieldErrors = validateForm(fd, ["recommender_area", "comment"]);
+  if (Object.keys(fieldErrors).length) return { error: "有几项需要改一下，见红字", fieldErrors };
   const area = str(fd, "recommender_area", 40);
   if (!area) return { error: "请选择你住的片区" };
   const comment = str(fd, "comment", 300);

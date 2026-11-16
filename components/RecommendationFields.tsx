@@ -1,4 +1,5 @@
 import type { RecommendationInput } from "@/lib/provider-form";
+import { FieldError } from "./ActionForm";
 
 const input = "w-full rounded-xl border border-gray-300 bg-white px-3 py-2";
 const label = "block text-sm font-medium text-gray-700";
@@ -18,6 +19,7 @@ export default function RecommendationFields({ areas, d }: { areas: string[]; d?
             </option>
           ))}
         </select>
+        <FieldError name="recommender_area" />
       </div>
       <div>
         <label className={label}>修了什么 / 做了什么</label>
@@ -38,6 +40,7 @@ export default function RecommendationFields({ areas, d }: { areas: string[]; d?
           className={input}
           placeholder="说一件具体的事：多快上门、价格公不公道、活干得怎么样"
         />
+        <FieldError name="comment" />
         <p className="mt-1 text-xs text-gray-500">空话、刷单、自荐会被隐藏。站长审核通过后展示。</p>
       </div>
     </div>
