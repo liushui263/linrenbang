@@ -133,7 +133,13 @@ export default async function ProviderPage({ params }: Props) {
       {/* 底部悬浮栏 */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto max-w-2xl">
-          <ContactButtons providerId={p.id} hasWechat={p.has_wechat} paused={p.status === "paused"} />
+          <ContactButtons
+          providerId={p.id}
+          methods={p.contact_methods}
+          pref={p.contact_pref}
+          hasWechat={p.has_wechat}
+          paused={p.status === "paused"}
+        />
         </div>
       </div>
     </div>

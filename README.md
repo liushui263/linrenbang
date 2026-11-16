@@ -7,7 +7,7 @@
 
 ## 第一次上线（站长照做即可）
 
-1. **Supabase**：新建项目 → SQL Editor 里**按编号顺序**整段运行 `supabase/migrations/` 下的每个文件（`0001_init.sql`、`0002_other_category.sql`……）。以后有新的编号文件，要在部署新代码**之前**先运行。
+1. **Supabase**：新建项目 → SQL Editor 里**按编号顺序**整段运行 `supabase/migrations/` 下的每个文件（`0001_init.sql`、`0002_other_category.sql`、`0003_contact_pref.sql`……）。以后有新的编号文件，要在部署新代码**之前**先运行。
    - **生产库不要跑** `supabase/seed.sql`（那是开发用的 555 假号码）。
 2. **Google 登录**（v3 唯一的登录方式）：
    - Google Cloud Console → APIs & Services → Credentials → 新建 OAuth Client（Web），回调地址填 Supabase 给的 `https://<项目>.supabase.co/auth/v1/callback`。
@@ -39,6 +39,7 @@ npm run lint && npm run typecheck
 | 同片区推荐置顶（13.4） | `/provider/[id]` | 访客选的片区与推荐人片区一致时排最前，标“同片区邻居” |
 | 双语免责声明（13.4） | `components/Footer.tsx` | 每页底部 |
 | 只开 Google 登录（13.5） | `/login` | 手机号、微信按钮灰显“暂不支持” |
+| 联系方式偏好（13.8） | `components/ContactButtons.tsx`、`components/ProviderFields.tsx` | 商家选打电话 / 发短信 / 加微信（可多选）和最希望的一种；名片上偏好的排第一 |
 | 电话微信防爬（13.6） | `app/api/providers/[id]/contact`、SQL 列权限 | 页面源码里没有电话和微信；前端 anon key 读不到这两列；点按钮才取，同一 IP 每小时最多 30 次 |
 
 **安全边界**：前端的 anon key 只能读公开数据，所有写操作都走服务端（Server Action + service role），服务端负责校验登录、归属和站长白名单。

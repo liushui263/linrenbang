@@ -23,3 +23,14 @@ export const DISCLAIMER_ZH =
   "免责声明：邻人帮仅为本地华人生活信息展示与邻里经验分享平台，不核验商家的州专业执照、商业保险或背景资质，不构成任何官方背书或担保。服务交易与售后纠纷由用户与商家自行协商承担。";
 export const DISCLAIMER_EN =
   "Disclaimer: Linren Bang is an informational community directory only. We do not verify state licenses, insurance, or background credentials, nor do we endorse or guarantee any service provider. Users engage providers at their own discretion and risk.";
+
+/** 顾客联系商家的方式（v3.4）：商家可多选，并指定一个“最希望”的方式 */
+export const CONTACT_METHODS = [
+  { id: "phone", zh: "打电话", pref: "偏好电话联系" },
+  { id: "sms", zh: "发短信", pref: "偏好短信联系" },
+  { id: "wechat", zh: "加微信", pref: "偏好微信联系" },
+] as const;
+export type ContactMethod = (typeof CONTACT_METHODS)[number]["id"];
+export const CONTACT_METHOD_IDS: readonly string[] = CONTACT_METHODS.map((m) => m.id);
+/** 发短信时预填的开头，商家一看就知道是从邻人帮来的 */
+export const SMS_GREETING = "你好，我在邻人帮看到你的名片，想咨询一下：";
