@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { registerMerchant } from "@/app/actions/merchant";
-import ActionForm, { FieldError } from "@/components/ActionForm";
+import ActionForm from "@/components/ActionForm";
+import ImageUpload from "@/components/ImageUpload";
 import ProviderFields from "@/components/ProviderFields";
 import SubmitButton from "@/components/SubmitButton";
 import { FOUNDING_DAYS, ROTATION_POOL_PER_CATEGORY } from "@/constants/site";
@@ -81,16 +82,8 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
       {banner}
       <ActionForm action={registerMerchant}>
         <ProviderFields cityId={loc.city.id} />
-        <div>
-          <label className="block text-sm font-medium text-gray-700">头像（选填，JPG/PNG，5MB 内）</label>
-          <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" className="mt-1 text-sm" />
-            <FieldError name="avatar" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">执照照片（选填，只有站长能看到原图链接）</label>
-          <input type="file" name="license_photo" accept="image/jpeg,image/png,image/webp" className="mt-1 text-sm" />
-            <FieldError name="license_photo" />
-        </div>
+        <ImageUpload name="avatar" label="头像（选填）" crop />
+        <ImageUpload name="license_photo" label="执照照片（选填，只有站长能看到原图链接）" />
         <SubmitButton>提交审核</SubmitButton>
       </ActionForm>
       <p className="text-center text-sm text-gray-500">

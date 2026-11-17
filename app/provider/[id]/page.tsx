@@ -85,7 +85,7 @@ export default async function ProviderPage({ params }: Props) {
         </div>
         {licenseUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={licenseUrl} alt="商家上传的执照照片" className="mt-3 max-h-64 rounded-lg border" />
+          <img src={licenseUrl} alt="商家上传的执照照片" className="mt-3 max-h-64 max-w-full rounded-lg border object-contain" />
         )}
         <div className="mt-3 flex items-center justify-between">
           <CopyLinkButton />

@@ -1,14 +1,16 @@
 "use client";
 
-import { createContext, useActionState, useContext, useEffect, useRef, useState, useTransition } from "react";
+import { createContext, useActionState, useCallback, useContext, useEffect, useRef, useState, useTransition } from "react";
 import type { FormState } from "@/app/actions/recommend";
 import { validateField, type FieldErrors } from "@/lib/validate";
 
 interface Ctx {
   errors: FieldErrors;
   pending: boolean;
+  /** 图片组件把处理好（压缩/裁剪）的图片登记到这里，提交时替换原文件 */
+  setFile: (name: string, file: Blob | null) => void;
 }
-const FormCtx = createContext<Ctx>({ errors: {}, pending: false });
+const FormCtx = createContext<Ctx>({ errors: {}, pending: false, setFile: () => {} });
 export const useActionForm = () => useContext(FormCtx);
 
 /** 显示某个字段的错误（放在对应输入框下面） */
@@ -37,6 +39,10 @@ export default function ActionForm({
   const [, startTransition] = useTransition();
   const [errors, setErrors] = useState<FieldErrors>({});
   const formRef = useRef<HTMLFormElement>(null);
+  const filesRef = useRef<Record<string, Blob | null>>({});
+  const setFile = useCallback((name: string, file: Blob | null) => {
+    filesRef.current[name] = file;
+  }, []);
 
   const fieldNames = () => {
     const form = formRef.current;
@@ -75,6 +81,9 @@ export default function ActionForm({
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    for (const [name, file] of Object.entries(filesRef.current)) {
+      if (file) fd.set(name, file, `${name}.jpg`);
+    }
     const errs: FieldErrors = {};
     for (const n of fieldNames()) {
       const msg = validateField(n, fd);
@@ -93,7 +102,7 @@ export default function ActionForm({
 
   const errorCount = Object.keys(errors).length;
   return (
-    <FormCtx.Provider value={{ errors, pending: actionPending }}>
+    <FormCtx.Provider value={{ errors, pending: actionPending, setFile }}>
       <form
         ref={formRef}
         noValidate
