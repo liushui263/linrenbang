@@ -33,7 +33,7 @@ export default async function MerchantPage() {
   const admin = createAdminClient();
   const { data } = await admin
     .from("providers")
-    .select(`${PUBLIC_PROVIDER_COLUMNS}, phone, wechat_id, license_number`)
+    .select(`${PUBLIC_PROVIDER_COLUMNS}, phone, wechat_id, license_number, license_photo_url`)
     .eq("owner_user_id", user.id)
     .maybeSingle();
   if (!data) {
@@ -50,7 +50,18 @@ export default async function MerchantPage() {
       </div>
     );
   }
-  const p = data as unknown as PublicProvider & { phone: string; wechat_id: string | null; license_number: string | null };
+  const p = data as unknown as PublicProvider & {
+    phone: string;
+    wechat_id: string | null;
+    license_number: string | null;
+    license_photo_url: string | null;
+  };
+  // 执照照片在私有桶里，用临时链接给本人看
+  let licenseUrl: string | null = null;
+  if (p.license_photo_url) {
+    const { data: signed } = await admin.storage.from("licenses").createSignedUrl(p.license_photo_url, 60 * 30);
+    licenseUrl = signed?.signedUrl ?? null;
+  }
 
   const founding = isFoundingActive(p.founding_expires_at);
   let inPool = false;
@@ -75,7 +86,7 @@ export default async function MerchantPage() {
         <span className="text-sm text-gray-500">{STATUS[p.status]}</span>
       </div>
 
-      <ProviderCard provider={p} isTodayPick={todayPick} />
+      <ProviderCard provider={p} isTodayPick={todayPick} share={p.status === "active" || p.status === "paused"} />
 
       <section className="grid grid-cols-2 gap-3 text-center">
         <div className="rounded-2xl bg-white p-4">
@@ -119,8 +130,8 @@ export default async function MerchantPage() {
         <p className="mb-3 text-sm text-gray-500">电话：{formatUsPhone(p.phone)}（不可改，要换号请联系站长）</p>
         <ActionForm action={updateMerchant}>
           <ProviderFields d={p} showPhone={false} />
-          <ImageUpload name="avatar" label="换头像（选填）" crop />
-          <ImageUpload name="license_photo" label="上传执照照片（选填）" />
+          <ImageUpload name="avatar" label={p.avatar_url ? "头像" : "头像（选填）"} crop current={p.avatar_url} />
+          <ImageUpload name="license_photo" label={licenseUrl ? "执照照片" : "执照照片（选填）"} current={licenseUrl} />
           <SubmitButton>保存</SubmitButton>
         </ActionForm>
       </section>
