@@ -56,6 +56,16 @@ export default async function MerchantPage() {
     license_number: string | null;
     license_photo_url: string | null;
   };
+  // 邻居给我的推荐（已展示的全部列出，审核中的只给个数）
+  const { data: recRows } = await admin
+    .from("recommendations")
+    .select("id, recommender_area, service_item, cost_approx, comment, status, created_at")
+    .eq("provider_id", p.id)
+    .in("status", ["active", "pending"])
+    .order("created_at", { ascending: false });
+  const myRecs = (recRows ?? []).filter((r) => r.status === "active");
+  const pendingRecs = (recRows ?? []).length - myRecs.length;
+
   // 执照照片在私有桶里，用临时链接给本人看
   let licenseUrl: string | null = null;
   if (p.license_photo_url) {
@@ -124,6 +134,40 @@ export default async function MerchantPage() {
       </p>
 
       {(p.status === "active" || p.status === "paused") && <PauseToggle paused={p.status === "paused"} />}
+
+      <section id="recommendations" className="rounded-2xl bg-white p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-semibold">邻居给我的推荐（{myRecs.length}）</h2>
+          {(p.status === "active" || p.status === "paused") && (
+            <Link href={`/provider/${p.id}`} className="text-sm text-emerald-700 underline">
+              看我的公开名片
+            </Link>
+          )}
+        </div>
+        {pendingRecs > 0 && <p className="mb-2 text-xs text-gray-500">另有 {pendingRecs} 条在审核中，通过后会显示在这里。</p>}
+        {myRecs.length === 0 ? (
+          <p className="text-sm text-gray-500">还没有邻居推荐。把名片分享给老客户，请他们来写一句吧。</p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {myRecs.map((r) => (
+              <li key={r.id} className="py-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5">{r.recommender_area} 邻居</span>
+                  <span>{new Date(r.created_at).toLocaleDateString("zh-CN", { timeZone: "America/Chicago" })}</span>
+                </div>
+                {(r.service_item || r.cost_approx) && (
+                  <p className="mt-1 text-gray-500">
+                    {r.service_item && <>修了：{r.service_item}</>}
+                    {r.service_item && r.cost_approx && " · "}
+                    {r.cost_approx && <>大约：{r.cost_approx}</>}
+                  </p>
+                )}
+                <p className="mt-1 whitespace-pre-wrap text-gray-800">{r.comment}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="rounded-2xl bg-white p-4">
         <h2 className="mb-3 font-semibold">编辑名片</h2>
