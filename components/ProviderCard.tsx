@@ -90,7 +90,15 @@ export default function ProviderCard({ provider: p, isTodayPick, expanded }: Pro
           </Link>
         )}
         <div className="shrink-0">
-          <ShareButton path={`/provider/${p.id}`} title={`邻居推荐：${p.name}（${providerCategoryLabel(p)}）`} />
+          <ShareButton
+            path={`/provider/${p.id}`}
+            title={`邻居推荐：${p.name}（${providerCategoryLabel(p)}）`}
+            lines={[
+              `【邻人帮推荐】${p.name} · ${providerCategoryLabel(p)}`,
+              ...(p.sub_tags.length ? [p.sub_tags.join(" · ")] : []),
+              ...(p.tagline ? [p.tagline] : []),
+            ]}
+          />
         </div>
       </div>
       {expanded ? body : (
