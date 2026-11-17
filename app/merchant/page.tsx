@@ -96,7 +96,7 @@ export default async function MerchantPage() {
         <span className="text-sm text-gray-500">{STATUS[p.status]}</span>
       </div>
 
-      <ProviderCard provider={p} isTodayPick={todayPick} share={p.status === "active" || p.status === "paused"} />
+      <ProviderCard provider={p} isTodayPick={todayPick} />
 
       <section className="grid grid-cols-2 gap-3 text-center">
         <div className="rounded-2xl bg-white p-4">

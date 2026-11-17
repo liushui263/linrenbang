@@ -9,18 +9,16 @@ interface Props {
   provider: PublicProvider;
   isTodayPick?: boolean;
   expanded?: boolean; // 详情页的展开版
-  share?: boolean; // 左上角显示“分享”按钮（详情页默认显示）
 }
 
 /** 第 8 节名片版式：一个组件，列表和详情页复用 */
-export default function ProviderCard({ provider: p, isTodayPick, expanded, share = expanded }: Props) {
+export default function ProviderCard({ provider: p, isTodayPick, expanded }: Props) {
   const founding = isFoundingActive(p.founding_expires_at);
   const summary = p.tagline || (p.description ? p.description.slice(0, 60) : "");
   const tags = expanded ? p.sub_tags : p.sub_tags.slice(0, 3);
 
-  const head = (
-    <>
-      {/* 1. 头像 + 名字 + 分类徽章 */}
+  /* 1. 头像 + 名字 + 分类徽章（右边是分享按钮，放在外面，不跟着整块链接走） */
+  const titleRow = (
       <div className="flex items-center gap-3">
         {p.avatar_url ? (
           expanded ? (
@@ -45,7 +43,10 @@ export default function ProviderCard({ provider: p, isTodayPick, expanded, share
           </div>
         </div>
       </div>
+  );
 
+  const body = (
+    <>
       {/* 2. 推荐数 + 角标 + 执照文案 */}
       <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
         <span className="font-semibold text-orange-600">🔥 {p.recommend_count}位邻居推荐</span>
@@ -80,14 +81,21 @@ export default function ProviderCard({ provider: p, isTodayPick, expanded, share
 
   return (
     <article className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-      {share && (
-        <div className="mb-3">
+      <div className="flex items-center gap-2">
+        {expanded ? (
+          <div className="min-w-0 flex-1">{titleRow}</div>
+        ) : (
+          <Link href={`/provider/${p.id}`} className="block min-w-0 flex-1">
+            {titleRow}
+          </Link>
+        )}
+        <div className="shrink-0">
           <ShareButton path={`/provider/${p.id}`} title={`邻居推荐：${p.name}（${providerCategoryLabel(p)}）`} />
         </div>
-      )}
-      {expanded ? head : (
+      </div>
+      {expanded ? body : (
         <Link href={`/provider/${p.id}`} className="block">
-          {head}
+          {body}
         </Link>
       )}
       {/* 7. 底部双按钮 */}
