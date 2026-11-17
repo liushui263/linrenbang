@@ -21,8 +21,16 @@ export default function ProviderCard({ provider: p, isTodayPick, expanded }: Pro
       {/* 1. 头像 + 名字 + 分类徽章 */}
       <div className="flex items-center gap-3">
         {p.avatar_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.avatar_url} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
+          expanded ? (
+            // 详情页：头像大一点，点开看完整照片
+            <a href={p.avatar_url} target="_blank" rel="noopener" className="shrink-0" title="点开看大图">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.avatar_url} alt={`${p.name}的照片`} className="h-16 w-16 rounded-full border object-cover" />
+            </a>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.avatar_url} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
+          )
         ) : (
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-700">
             {p.name.slice(0, 1)}
