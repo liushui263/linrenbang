@@ -3,15 +3,17 @@ import { providerCategoryLabel } from "@/constants/categories";
 import { foundingDaysLeft, isFoundingActive } from "@/lib/rotation";
 import type { PublicProvider } from "@/lib/types";
 import ContactButtons from "./ContactButtons";
+import ShareButton from "./ShareButton";
 
 interface Props {
   provider: PublicProvider;
   isTodayPick?: boolean;
   expanded?: boolean; // 详情页的展开版
+  share?: boolean; // 左上角显示“分享”按钮（详情页默认显示）
 }
 
 /** 第 8 节名片版式：一个组件，列表和详情页复用 */
-export default function ProviderCard({ provider: p, isTodayPick, expanded }: Props) {
+export default function ProviderCard({ provider: p, isTodayPick, expanded, share = expanded }: Props) {
   const founding = isFoundingActive(p.founding_expires_at);
   const summary = p.tagline || (p.description ? p.description.slice(0, 60) : "");
   const tags = expanded ? p.sub_tags : p.sub_tags.slice(0, 3);
@@ -78,6 +80,11 @@ export default function ProviderCard({ provider: p, isTodayPick, expanded }: Pro
 
   return (
     <article className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      {share && (
+        <div className="mb-3">
+          <ShareButton path={`/provider/${p.id}`} title={`邻居推荐：${p.name}（${providerCategoryLabel(p)}）`} />
+        </div>
+      )}
       {expanded ? head : (
         <Link href={`/provider/${p.id}`} className="block">
           {head}

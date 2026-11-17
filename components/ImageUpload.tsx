@@ -29,13 +29,27 @@ function loadImage(file: File): Promise<HTMLImageElement> {
 /**
  * 选图片：在手机上先压缩成 JPEG 再上传（避免原图太大、HEIC 格式被拒）。
  * crop=true 时（头像）给一个圆形取景框，拖动/缩放选好要显示的部分；缩到最小能看到整张图。
+ * current：已经上传过的照片地址。会显示出来，并给一个“删除这张”（保存后生效，提交 `${name}_remove=1`）。
  */
-export default function ImageUpload({ name, label, crop = false }: { name: string; label: string; crop?: boolean }) {
+export default function ImageUpload({
+  name,
+  label,
+  crop = false,
+  current = null,
+}: {
+  name: string;
+  label: string;
+  crop?: boolean;
+  current?: string | null;
+}) {
   const { setFile } = useActionForm();
   const inputRef = useRef<HTMLInputElement>(null);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [remove, setRemove] = useState(false);
+  // 保存后照片换了/删了，重新开始
+  useEffect(() => setRemove(false), [current]);
   // 裁剪状态：缩放倍数相对“刚好铺满取景框”的比例
   const [zoom, setZoom] = useState(1);
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -96,6 +110,7 @@ export default function ImageUpload({ name, label, crop = false }: { name: strin
         setFile(name, blob);
       }
       setImg(loaded);
+      setRemove(false);
     } catch {
       setError("这张图片打不开，请换一张，或者截个图再传");
       clear();
@@ -124,14 +139,44 @@ export default function ImageUpload({ name, label, crop = false }: { name: strin
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700">{label}</label>
-      <div className="mt-1 flex items-center gap-3">
+      {current && !img && (
+        <div className="mt-2 flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={current}
+            alt="现在用的照片"
+            className={`border ${crop ? "h-20 w-20 rounded-full object-cover" : "h-24 max-w-[10rem] rounded-lg object-contain"} ${
+              remove ? "opacity-30 grayscale" : ""
+            }`}
+          />
+          <div className="text-sm">
+            {remove ? (
+              <>
+                <p className="text-red-600">点“保存”后会删除这张</p>
+                <button type="button" onClick={() => setRemove(false)} className="mt-1 text-gray-500 underline">
+                  不删了
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-500">现在用的照片</p>
+                <button type="button" onClick={() => setRemove(true)} className="mt-1 text-red-600 underline">
+                  删除这张
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {remove && <input type="hidden" name={`${name}_remove`} value="1" />}
+      <div className="mt-2 flex items-center gap-3">
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
           className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 disabled:opacity-60"
         >
-          {busy ? "处理中…" : img ? "换一张" : "选择照片"}
+          {busy ? "处理中…" : img || current ? "换一张" : "选择照片"}
         </button>
         {img && (
           <button type="button" onClick={clear} className="text-sm text-gray-500 underline">

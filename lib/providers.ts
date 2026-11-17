@@ -141,3 +141,10 @@ export async function foundingSlotsLeft(): Promise<number> {
     .not("founding_rank", "is", null);
   return Math.max(0, FOUNDING_SLOTS - (count ?? 0));
 }
+
+/** 当前登录用户自己的店（没有就 null）。用于首页/页脚把“免费注册”换成“管理我的名片” */
+export async function getMyProvider(userId: string | null | undefined): Promise<{ id: string; name: string } | null> {
+  if (!userId) return null;
+  const { data } = await createAdminClient().from("providers").select("id, name").eq("owner_user_id", userId).maybeSingle();
+  return data ?? null;
+}

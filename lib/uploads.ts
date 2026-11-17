@@ -24,3 +24,13 @@ export async function uploadImage(
   if (bucket === "avatars") return { value: admin.storage.from(bucket).getPublicUrl(path).data.publicUrl };
   return { value: path };
 }
+
+/** 删掉旧图片（换图或删图时调用）。只删本人目录下的文件；失败不影响保存 */
+export async function removeImage(value: string | null | undefined, bucket: "avatars" | "licenses", ownerId: string) {
+  if (!value) return;
+  // 头像存的是公开 URL，执照存的是存储路径
+  const path = bucket === "avatars" ? value.split("/storage/v1/object/public/avatars/")[1] : value;
+  if (!path || !path.startsWith(`${ownerId}/`)) return;
+  const { error } = await createAdminClient().storage.from(bucket).remove([path]);
+  if (error) console.error("[removeImage]", bucket, error.message);
+}
