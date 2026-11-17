@@ -32,7 +32,10 @@ async function copyText(text: string): Promise<boolean> {
  * - 其他浏览器：弹出小菜单，“复制链接”（发微信用这个，iPhone 系统分享到微信常会报 unable to share）
  *   和“更多分享方式”（系统分享：短信、邮件等）
  */
-export default function ShareButton({ path, title }: { path: string; title: string }) {
+/**
+ * lines：放在链接前面的几行文字（店名、服务、技能标签），复制和系统分享都带上
+ */
+export default function ShareButton({ path, title, lines = [] }: { path: string; title: string; lines?: string[] }) {
   const [open, setOpen] = useState(false);
   const [inWechat, setInWechat] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
@@ -45,18 +48,23 @@ export default function ShareButton({ path, title }: { path: string; title: stri
     setUrl(new URL(path, window.location.origin).toString());
   }, [path]);
 
+  const shareText = [...lines, url].join("\n");
+
   async function onCopy() {
-    const ok = await copyText(url);
+    const ok = await copyText(shareText);
     setCopied(ok ? "ok" : "fail");
   }
 
   async function onNativeShare() {
+    // 先复制一份：如果选了微信又报 unable to share，回到微信直接粘贴就行
+    // 两个都在点击当下发起（不先 await），否则 Safari 会认为不是用户操作而拒绝分享
+    void copyText(shareText).then((ok) => ok && setCopied("ok"));
     try {
-      // 只传标题和链接：带上大段文字时，有些 App（包括微信）接不住
-      await navigator.share({ title, url });
+      // 只传一段文字（链接放在文字里），不传 url 字段：iPhone 上微信收不了系统分享过来的网址
+      await navigator.share({ title, text: shareText });
       setOpen(false);
     } catch {
-      /* 用户取消，或这个 App 不支持，留在菜单里可以改用复制链接 */
+      /* 用户取消，或这个 App 不支持，留在菜单里可以改用复制 */
     }
   }
 
@@ -104,13 +112,13 @@ export default function ShareButton({ path, title }: { path: string; title: stri
                 ✕
               </button>
             </div>
-            <p className="break-all rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">{url}</p>
+            <p className="whitespace-pre-wrap break-all rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">{shareText}</p>
             <button type="button" onClick={onCopy} className="w-full rounded-xl bg-emerald-600 py-3 font-medium text-white">
-              {copied === "ok" ? "✓ 链接已复制" : "复制链接"}
+              {copied === "ok" ? "✓ 已复制，去微信粘贴吧" : "复制名片，发微信"}
             </button>
-            {copied === "fail" && <p className="text-sm text-red-600">没复制成功，请长按上面的链接手动复制</p>}
+            {copied === "fail" && <p className="text-sm text-red-600">没复制成功，请长按上面的文字手动复制</p>}
             <p className="text-sm text-gray-600">
-              <span className="font-medium">发微信：</span>复制链接后，打开微信群或聊天，粘贴发送即可。
+              <span className="font-medium">发微信：</span>点上面的按钮复制，打开微信群或聊天，长按输入框粘贴发送。iPhone 的系统分享直接选微信会报错，请用复制粘贴。
             </p>
             {canNativeShare && (
               <button
@@ -118,7 +126,7 @@ export default function ShareButton({ path, title }: { path: string; title: stri
                 onClick={onNativeShare}
                 className="w-full rounded-xl border border-gray-300 py-3 text-gray-700"
               >
-                更多分享方式（短信、邮件等）
+                发短信、邮件等（不适用于微信）
               </button>
             )}
           </div>
