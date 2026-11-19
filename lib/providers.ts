@@ -11,6 +11,8 @@ import { PUBLIC_PROVIDER_COLUMNS, type PublicProvider } from "@/lib/types";
 export interface ListFilters {
   cityId: string;
   category?: string;
+  /** 大类筛选：传一组细分类 id（category 优先） */
+  categories?: string[];
   area?: string;
   q?: string;
   page?: number;
@@ -48,6 +50,15 @@ export async function getTodayRotation(cityId: string, category?: string): Promi
   const picked = pickHomeRotation(perCategory, dayIndex);
   recordRotationLazily(cityId, "home_rotation", null, picked, date);
   return picked;
+}
+
+/** 大类页的今日轮换：从这个大类的几个细分类里各取轮换池，规则同首页（只展示，不写 ad_placements） */
+export async function getGroupRotation(cityId: string, categoryIds: string[]): Promise<PublicProvider[]> {
+  const dayIndex = dayIndexFor(chicagoDateString());
+  const perCategory = await Promise.all(
+    categoryIds.map(async (c) => pickDailyRotation(await rotationPool(cityId, c), dayIndex)),
+  );
+  return pickHomeRotation(perCategory, dayIndex);
 }
 
 /** 13.1 第 5 步：当天第一次请求时顺带写 ad_placements（响应发出后再写，不拖慢页面） */
@@ -110,6 +121,7 @@ export async function listProviders(f: ListFilters, excludeIds: string[] = []) {
     .eq("city_id", f.cityId)
     .in("status", ["active", "paused"]);
   if (f.category) query = query.eq("category", f.category);
+  else if (f.categories?.length) query = query.in("category", f.categories);
   if (f.area) query = query.contains("service_areas", [f.area]);
   if (f.q) {
     // 部分匹配：商家名、服务名、标语、简介、标签、分类名、邻居推荐里的“修了什么”和评语。
