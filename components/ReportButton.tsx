@@ -3,7 +3,9 @@
 import { useState, useTransition } from "react";
 import { createReport } from "@/app/actions/report";
 
-export default function ReportButton({ targetType, targetId }: { targetType: "provider" | "recommendation"; targetId: string }) {
+export type ReportTarget = "provider" | "recommendation" | "ask" | "ask_answer";
+
+export default function ReportButton({ targetType, targetId }: { targetType: ReportTarget; targetId: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
@@ -23,7 +25,11 @@ export default function ReportButton({ targetType, targetId }: { targetType: "pr
         onChange={(e) => setReason(e.target.value)}
         maxLength={300}
         rows={2}
-        placeholder="哪里不对？例如：电话打不通、已停业、推荐是刷的"
+        placeholder={
+          targetType === "ask" || targetType === "ask_answer"
+            ? "哪里不对？例如：广告、留了联系方式、商家自问自答"
+            : "哪里不对？例如：电话打不通、已停业、推荐是刷的"
+        }
         className="w-full rounded-lg border border-gray-300 p-2 text-sm"
       />
       <div className="flex gap-2">

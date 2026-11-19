@@ -35,7 +35,26 @@ async function copyText(text: string): Promise<boolean> {
 /**
  * lines：放在链接前面的几行文字（店名、服务、技能标签），复制和系统分享都带上
  */
-export default function ShareButton({ path, title, lines = [] }: { path: string; title: string; lines?: string[] }) {
+export default function ShareButton({
+  path,
+  title,
+  lines = [],
+  label = "分享",
+  heading = "分享这张名片",
+  copyLabel = "复制名片，发微信",
+  className,
+}: {
+  path: string;
+  title: string;
+  lines?: string[];
+  /** 按钮文字 */
+  label?: string;
+  /** 弹出菜单的标题 */
+  heading?: string;
+  copyLabel?: string;
+  /** 换掉默认的小圆角按钮样式 */
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [inWechat, setInWechat] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
@@ -76,14 +95,17 @@ export default function ShareButton({ path, title, lines = [] }: { path: string;
           setCopied(null);
           setOpen(true);
         }}
-        className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 active:bg-emerald-100"
-        aria-label="分享这张名片"
+        className={
+          className ??
+          "inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 active:bg-emerald-100"
+        }
+        aria-label={heading}
       >
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           <path d="M12 3v12M7 8l5-5 5 5" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" strokeLinecap="round" />
         </svg>
-        分享
+        {label}
       </button>
 
       {open && inWechat && (
@@ -104,17 +126,17 @@ export default function ShareButton({ path, title, lines = [] }: { path: string;
             className="w-full max-w-sm space-y-3 rounded-t-2xl bg-white p-5 pb-8 sm:rounded-2xl sm:pb-5"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
-            aria-label="分享名片"
+            aria-label={heading}
           >
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">分享这张名片</h2>
+              <h2 className="font-semibold text-gray-900">{heading}</h2>
               <button type="button" onClick={() => setOpen(false)} className="text-gray-400" aria-label="关闭">
                 ✕
               </button>
             </div>
             <p className="whitespace-pre-wrap break-all rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">{shareText}</p>
             <button type="button" onClick={onCopy} className="w-full rounded-xl bg-emerald-600 py-3 font-medium text-white">
-              {copied === "ok" ? "✓ 已复制，去微信粘贴吧" : "复制名片，发微信"}
+              {copied === "ok" ? "✓ 已复制，去微信粘贴吧" : copyLabel}
             </button>
             {copied === "fail" && <p className="text-sm text-red-600">没复制成功，请长按上面的文字手动复制</p>}
             <p className="text-sm text-gray-600">

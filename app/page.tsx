@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AreaSelect from "@/components/AreaSelect";
+import { AskRow } from "@/components/AskCard";
 import ProviderCard from "@/components/ProviderCard";
 import UnsupportedCityNotice from "@/components/UnsupportedCityNotice";
 import { nearbyLiveCities } from "@/constants/cities";
@@ -14,6 +15,8 @@ import {
   groupOfCategory,
 } from "@/constants/categories";
 import { HOT_SEARCHES, SITE_NAME, SITE_NAME_EN, SITE_SLOGAN_EN } from "@/constants/site";
+import { HOME_ASK_COUNT, titleFromSearch } from "@/lib/ask";
+import { getLatestAsks, similarAsks } from "@/lib/asks";
 import { getVisitorLocation } from "@/lib/location";
 import { getCurrentUser } from "@/lib/auth";
 import { getGroupRotation, getMyProvider, getTodayRotation, listProviders } from "@/lib/providers";
@@ -159,6 +162,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     rotation.map((p) => p.id),
   );
   const showRotation = rotation.length > 0 && page === 1;
+  // 首页（不搜索、不选分类、第一页）显示“邻居在求推荐”；搜不到时找类似的提问
+  const showAsks = !q && !category && !group && page === 1;
+  const [homeAsks, similar] = await Promise.all([
+    showAsks ? getLatestAsks(loc.city.id, HOME_ASK_COUNT).catch(() => null) : null,
+    q && list.total === 0 ? similarAsks(loc.city.id, q).catch(() => []) : [],
+  ]);
+  const askPrefill = q
+    ? `/ask/new?${new URLSearchParams({ q, ...(loc.area && { area: loc.area }), ...(searchGroups.length === 1 && { group: searchGroups[0].id }) })}`
+    : "/ask/new";
   const scopeName = category ? categoryName(category) : group ? group.zh : undefined;
   const label = scopeName ?? (q ? `“${q}”` : "师傅");
   const where = `${loc.city.zh}${loc.area ? ` · ${loc.area}` : ""}`;
@@ -358,33 +370,52 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <section id="results" aria-live="polite" className="space-y-3">
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                 <p className="text-base font-bold">
-                  没找到和“{q}”相关的{selectedNames.length ? selectedNames.join("、") : ""}师傅
+                  还没有邻居推荐过「{q}」{selectedNames.length ? `（${selectedNames.join("、")}）` : ""}
                 </p>
                 <p className="mt-1">
-                  {where}暂时没有。可以换个说法试试
+                  发个求推荐，附近用过的邻居看到会回你。
                   {selectedNames.length > 0 && (
                     <>
-                      ，或者
+                      也可以
                       <Link href={searchHref([])} className="underline">
                         在全部分类里搜
                       </Link>
+                      。
                     </>
                   )}
-                  。
                 </p>
-                <div className="mt-3 flex gap-2">
-                  <Link href="/recommend" className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-center font-medium text-white">
-                    我知道一个，推荐他
+                <div className="mt-3 rounded-xl bg-white p-3 ring-1 ring-amber-200">
+                  <p className="text-xs text-gray-500">帮你写好了，可以改：</p>
+                  <p className="mt-1 text-[15px] font-semibold text-gray-900">{titleFromSearch(q)}</p>
+                  <p className="mt-1 text-xs text-gray-500">📍 {loc.area ?? "发帖时选片区"}</p>
+                </div>
+                <Link href={askPrefill} className="mt-3 block rounded-xl bg-emerald-600 py-3 text-center text-base font-semibold text-white">
+                  🙋 问问邻居
+                </Link>
+                {similar.length > 0 && (
+                  <div className="mt-3 border-t border-amber-200 pt-2">
+                    <p className="text-xs text-amber-800">已经有邻居问过类似的：</p>
+                    <div className="mt-1 divide-y divide-amber-100 rounded-xl bg-white px-3 ring-1 ring-amber-200">
+                      {similar.map((a) => (
+                        <AskRow key={a.id} ask={a} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <p className="mt-3 text-center text-xs text-amber-800">
+                  我知道一个，
+                  <Link href="/recommend" className="underline">
+                    直接推荐他
                   </Link>
                   {!myShop && (
-                    <Link
-                      href="/merchant/register"
-                      className="flex-1 rounded-xl border border-emerald-600 bg-white py-2.5 text-center font-medium text-emerald-700"
-                    >
-                      我是商家，免费注册
-                    </Link>
+                    <>
+                      {" · "}我是商家，
+                      <Link href="/merchant/register" className="underline">
+                        免费注册
+                      </Link>
+                    </>
                   )}
-                </div>
+                </p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-3">{filterPanel}</div>
             </section>
@@ -402,6 +433,42 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 {rotation.map((p) => (
                   <ProviderCard key={p.id} provider={p} isTodayPick />
                 ))}
+              </div>
+            </section>
+          )}
+
+          {showAsks && homeAsks && (
+            <section className="rounded-2xl bg-gradient-to-b from-amber-50 to-white px-4 pb-3 pt-3 ring-1 ring-amber-200">
+              <div className="flex items-baseline justify-between">
+                <h2 className="font-bold text-gray-900">🙋 邻居在求推荐</h2>
+                {homeAsks.total > 0 && (
+                  <Link href="/ask" className="text-sm font-medium text-emerald-700">
+                    查看全部 ›
+                  </Link>
+                )}
+              </div>
+              <p className="mt-0.5 text-xs text-gray-500">用过靠谱的，顺手推荐一下；自己要找，也可以问</p>
+              {homeAsks.asks.length > 0 ? (
+                <div className="divide-y divide-amber-100">
+                  {homeAsks.asks.map((a) => (
+                    <AskRow key={a.id} ask={a} />
+                  ))}
+                </div>
+              ) : (
+                <p className="py-3 text-sm text-gray-600">找不到合适的师傅？发一条求推荐，附近用过的邻居会告诉你。</p>
+              )}
+              <div className="mt-1 flex gap-2">
+                <Link href="/ask/new" className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-center text-sm font-medium text-white">
+                  ✋ 我也要问邻居
+                </Link>
+                {homeAsks.total > 0 && (
+                  <Link
+                    href="/ask"
+                    className="flex-1 rounded-xl border border-emerald-600 bg-white py-2.5 text-center text-sm font-medium text-emerald-700"
+                  >
+                    查看全部 {homeAsks.total} 条
+                  </Link>
+                )}
               </div>
             </section>
           )}
