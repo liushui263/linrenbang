@@ -59,7 +59,7 @@ function GroupTile({ g, active, link }: { g: CategoryGroup; active: boolean; lin
   );
 }
 
-/** 分类区：6 个大类 + “查看全部分类”（另外 2 个大类 + 15 个细分类直达）；选中大类后下面出细分类 */
+/** 分类区：6 个大类 + “查看全部服务分类”（另外 2 个大类）；选中大类后下面出细分类 */
 function CategoryNav({ category, group, q }: { category?: string; group?: CategoryGroup; q?: string }) {
   const shown = CATEGORY_GROUPS.slice(0, HOME_GROUP_COUNT);
   const more = CATEGORY_GROUPS.slice(HOME_GROUP_COUNT);
@@ -98,7 +98,7 @@ function CategoryNav({ category, group, q }: { category?: string; group?: Catego
 
       <details open={activeInMore} className="group rounded-xl border border-slate-200 bg-white">
         <summary className="cursor-pointer list-none py-2.5 text-center text-sm font-medium text-emerald-700 [&::-webkit-details-marker]:hidden">
-          查看全部分类（{more.map((g) => g.zh).join("、")}…）
+          查看全部服务分类
           <span className="ml-1 inline-block transition group-open:rotate-180">▾</span>
         </summary>
         <div className="space-y-3 border-t border-slate-100 p-2.5">
@@ -106,20 +106,6 @@ function CategoryNav({ category, group, q }: { category?: string; group?: Catego
             {more.map((g) => (
               <GroupTile key={g.id} g={g} active={group?.id === g.id} link={groupHref(g, group, q)} />
             ))}
-          </div>
-          <div>
-            <p className="mb-1.5 text-xs text-gray-500">直接选细分类：</p>
-            <div className="flex flex-wrap gap-1.5">
-              {CATEGORIES.map((c) => (
-                <Link
-                  key={c.id}
-                  href={c.id === category ? href({ q }) : href({ category: c.id, q })}
-                  className={chip(c.id === category)}
-                >
-                  {c.icon} {c.zh}
-                </Link>
-              ))}
-            </div>
           </div>
         </div>
       </details>

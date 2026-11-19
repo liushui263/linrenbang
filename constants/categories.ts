@@ -46,14 +46,14 @@ export interface CategoryGroup {
 }
 
 export const CATEGORY_GROUPS: CategoryGroup[] = [
-  { id: "home_repair", zh: "房屋维修", icon: "🔨", tint: "#e0f2fe", hint: "空调·水暖·电路·屋顶", categories: ["hvac", "plumbing", "electrical", "roof"] },
-  { id: "renovation", zh: "装修家电", icon: "🛠️", tint: "#e0e7ff", hint: "装修杂修·家电车库门", categories: ["handyman", "appliance"] },
-  { id: "yard_pest", zh: "庭院除虫", icon: "🌿", tint: "#dcfce7", hint: "草坪围栏·除虫", categories: ["lawn_fence", "pest"] },
-  { id: "moving", zh: "搬家接送", icon: "🚚", tint: "#fef3c7", hint: "搬家·机场接送", categories: ["moving_ride"] },
-  { id: "real_estate", zh: "房产贷款", icon: "🏡", tint: "#ede9fe", hint: "经纪·贷款过户", categories: ["realtor", "mortgage_title"] },
-  { id: "food", zh: "餐饮美食", icon: "🍜", tint: "#ffedd5", hint: "餐馆·订席·外卖", categories: ["food"] },
-  { id: "finance", zh: "财税保险", icon: "🧾", tint: "#ccfbf1", hint: "税务·财务保险", categories: ["tax", "finance_insurance"] },
-  { id: "other", zh: "其他服务", icon: "⭐", tint: "#fef3c7", hint: "其他生活服务", categories: ["other"] },
+  { id: "home_repair", zh: "房屋维修", icon: "❄️", tint: "#e0f2fe", hint: "空调·水暖·电路·屋顶", categories: ["hvac", "plumbing", "electrical", "roof"] },
+  { id: "renovation", zh: "家居装修", icon: "🔧", tint: "#e0e7ff", hint: "装修·家电·车库门·杂修", categories: ["handyman", "appliance"] },
+  { id: "yard_pest", zh: "庭院虫害", icon: "🌿", tint: "#dcfce7", hint: "草坪·围栏·园艺·除虫", categories: ["lawn_fence", "pest"] },
+  { id: "moving", zh: "搬家交通", icon: "🚚", tint: "#fef3c7", hint: "搬家·机场接送·运输", categories: ["moving_ride"] },
+  { id: "real_estate", zh: "房产服务", icon: "🏠", tint: "#ede9fe", hint: "经纪·贷款·过户", categories: ["realtor", "mortgage_title"] },
+  { id: "food", zh: "餐饮美食", icon: "🍜", tint: "#ffedd5", hint: "中餐·外卖·餐饮推荐", categories: ["food"] },
+  { id: "finance", zh: "财税保险", icon: "🧾", tint: "#ccfbf1", hint: "税务·财务·保险", categories: ["tax", "finance_insurance"] },
+  { id: "other", zh: "其他本地服务", icon: "⭐", tint: "#fef3c7", hint: "其他生活及专业服务", categories: ["other"] },
 ];
 
 export const HOME_GROUP_COUNT = 6;
