@@ -7,7 +7,7 @@ import { validateForm } from "@/lib/validate";
 import { formatUsPhone, toE164 } from "@/lib/phone";
 import { parseProviderForm } from "@/lib/provider-form";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { uploadImage } from "@/lib/uploads";
+import { removeImage, uploadImage } from "@/lib/uploads";
 import type { FormState } from "./recommend";
 
 /** 电话已被登记：提示并给出“认领我的店”链接，电话带过去不用再填 */
@@ -67,7 +67,11 @@ export async function updateMerchant(_prev: FormState, fd: FormData): Promise<Fo
   const user = await getCurrentUser();
   if (!user) return { error: "请先登录" };
   const admin = createAdminClient();
-  const { data: mine } = await admin.from("providers").select("id, status").eq("owner_user_id", user.id).maybeSingle();
+  const { data: mine } = await admin
+    .from("providers")
+    .select("id, status, avatar_url, license_photo_url")
+    .eq("owner_user_id", user.id)
+    .maybeSingle();
   if (!mine) return { error: "没找到你的商家" };
   const parsed = parseProviderForm(fd, false);
   if (!parsed.data) return { error: parsed.error, fieldErrors: parsed.fieldErrors };
@@ -79,12 +83,19 @@ export async function updateMerchant(_prev: FormState, fd: FormData): Promise<Fo
 
   const update: Record<string, unknown> = { ...rest };
   if (avatar.value) update.avatar_url = avatar.value;
+  else if (fd.get("avatar_remove") === "1") update.avatar_url = null;
   if (license.value) {
     update.license_photo_url = license.value;
     update.license_status = "doc_uploaded";
+  } else if (fd.get("license_photo_remove") === "1") {
+    update.license_photo_url = null;
+    update.license_status = rest.is_licensed ? "self_claimed" : "unclaimed";
   }
   const { error } = await admin.from("providers").update(update).eq("id", mine.id);
   if (error) return { error: dbErrorMessage("updateMerchant", error) };
+  // 换掉或删掉的旧照片，从存储里也删掉
+  if ("avatar_url" in update) await removeImage(mine.avatar_url, "avatars", user.id);
+  if ("license_photo_url" in update) await removeImage(mine.license_photo_url, "licenses", user.id);
   revalidatePath("/merchant");
   revalidatePath(`/provider/${mine.id}`);
   const imgErr = avatar.error || license.error;

@@ -5,7 +5,8 @@ import WaitlistForm from "@/components/WaitlistForm";
 import { CATEGORIES, CATEGORY_IDS, categoryName } from "@/constants/categories";
 import { SITE_NAME, SITE_NAME_EN, SITE_SLOGAN_EN } from "@/constants/site";
 import { getVisitorLocation } from "@/lib/location";
-import { getTodayRotation, listProviders } from "@/lib/providers";
+import { getCurrentUser } from "@/lib/auth";
+import { getMyProvider, getTodayRotation, listProviders } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,8 @@ function href(params: Record<string, string | undefined>) {
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const loc = await getVisitorLocation();
+  const [loc, user] = await Promise.all([getVisitorLocation(), getCurrentUser().catch(() => null)]);
+  const myShop = await getMyProvider(user?.id).catch(() => null);
   const category = sp.category && CATEGORY_IDS.includes(sp.category) ? sp.category : undefined;
   const q = sp.q?.trim() || undefined;
   const page = Math.max(1, Number(sp.page) || 1);
@@ -92,19 +94,32 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>
       </section>
 
-      <nav className="grid grid-cols-3 gap-2" aria-label="分类">
+      <nav className="grid grid-cols-3 gap-2 min-[361px]:gap-2.5 sm:grid-cols-4 sm:gap-3" aria-label="分类">
         {CATEGORIES.map((c) => {
           const active = c.id === category;
           return (
             <Link
               key={c.id}
               href={active ? href({ q }) : href({ category: c.id, q })}
-              className={`flex flex-col items-center gap-1 rounded-xl border px-1 py-3 text-center text-xs ${
-                active ? "border-emerald-600 bg-emerald-50 text-emerald-800" : "border-gray-200 bg-white text-gray-700"
+              aria-current={active ? "page" : undefined}
+              className={`flex min-h-[100px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl border-[1.5px] px-1 py-2.5 text-center shadow-[0_3px_10px_rgba(30,70,120,0.07)] transition duration-200 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-[0_9px_22px_rgba(30,90,80,0.14)] active:translate-y-0 sm:min-h-[128px] sm:gap-2 sm:rounded-[20px] sm:py-4 ${
+                active ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/20" : "border-slate-200 bg-white"
               }`}
             >
-              <span className="text-2xl">{c.icon}</span>
-              {c.zh}
+              <span
+                aria-hidden="true"
+                className="flex h-[52px] w-[52px] items-center justify-center rounded-full text-[30px] leading-none min-[361px]:h-14 min-[361px]:w-14 min-[361px]:text-[32px] sm:h-[68px] sm:w-[68px] sm:text-[40px]"
+                style={{ backgroundColor: c.tint }}
+              >
+                {c.icon}
+              </span>
+              <span
+                className={`text-[12.5px] font-bold leading-snug [overflow-wrap:anywhere] min-[361px]:text-sm sm:text-base ${
+                  active ? "text-emerald-800" : "text-slate-800"
+                }`}
+              >
+                {c.zh}
+              </span>
             </Link>
           );
         })}
@@ -134,10 +149,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               <Link href="/recommend" className="text-emerald-700 underline">
                 你来推荐第一个
               </Link>
-              ，或者
-              <Link href="/merchant/register" className="text-emerald-700 underline">
-                商家免费注册
-              </Link>
+              {!myShop && (
+                <>
+                  ，或者
+                  <Link href="/merchant/register" className="text-emerald-700 underline">
+                    商家免费注册
+                  </Link>
+                </>
+              )}
               。
             </p>
           </div>
@@ -172,13 +191,23 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         )}
       </section>
 
-      <section className="rounded-2xl bg-emerald-600 p-4 text-white">
-        <p className="font-semibold">你是师傅/商家？</p>
-        <p className="mt-1 text-sm text-emerald-50">免费注册，前 100 名是创始商家（有效期 100 天），每分类前 10 名每天轮换上首页。</p>
-        <Link href="/merchant/register" className="mt-3 inline-block rounded-lg bg-white px-4 py-2 text-sm font-medium text-emerald-700">
-          免费注册
-        </Link>
-      </section>
+      {myShop ? (
+        <section className="rounded-2xl bg-emerald-600 p-4 text-white">
+          <p className="font-semibold">我的店：{myShop.name}</p>
+          <p className="mt-1 text-sm text-emerald-50">改名片、换照片、看邻居给你的推荐，都在这里。</p>
+          <Link href="/merchant" className="mt-3 inline-block rounded-lg bg-white px-4 py-2 text-sm font-medium text-emerald-700">
+            管理我的名片
+          </Link>
+        </section>
+      ) : (
+        <section className="rounded-2xl bg-emerald-600 p-4 text-white">
+          <p className="font-semibold">你是师傅/商家？</p>
+          <p className="mt-1 text-sm text-emerald-50">免费注册，前 100 名是创始商家（有效期 100 天），每分类前 10 名每天轮换上首页。</p>
+          <Link href="/merchant/register" className="mt-3 inline-block rounded-lg bg-white px-4 py-2 text-sm font-medium text-emerald-700">
+            免费注册
+          </Link>
+        </section>
+      )}
     </div>
   );
 }
