@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatUsPhone } from "@/lib/phone";
+import { trackProviderEvent } from "@/lib/track";
 
 interface Props {
   providerId: string;
@@ -48,7 +49,9 @@ export default function ContactButtons({ providerId, hasWechat, paused }: Props)
     setLoading("call");
     const c = await fetchContact();
     setLoading(null);
-    if (c?.phone) window.location.href = `tel:${c.phone}`;
+    if (!c?.phone) return;
+    trackProviderEvent(providerId, "call");
+    window.location.href = `tel:${c.phone}`;
   }
 
   async function onWechat() {
@@ -56,6 +59,7 @@ export default function ContactButtons({ providerId, hasWechat, paused }: Props)
     const c = await fetchContact();
     setLoading(null);
     if (!c?.wechat_id) return;
+    trackProviderEvent(providerId, "wechat");
     try {
       await navigator.clipboard.writeText(c.wechat_id);
       flash(`已复制微信号：${c.wechat_id}`);
