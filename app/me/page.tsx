@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
+import MyFavorites from "@/components/MyFavorites";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -26,6 +27,8 @@ export default async function MePage() {
         <h1 className="text-xl font-bold">我的</h1>
         <p className="text-sm text-gray-500">{user.email}</p>
       </div>
+
+      <MyFavorites userId={user.id} />
 
       <section className="rounded-2xl bg-white p-4">
         <h2 className="font-semibold">我的店</h2>
