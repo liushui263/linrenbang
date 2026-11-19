@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import { HOME_OG, SITE_NAME, SITE_NAME_EN, SITE_SLOGAN_EN, SITE_URL } from "@/constants/site";
 import { getCurrentUser } from "@/lib/auth";
 import { getVisitorLocation } from "@/lib/location";
+import { getMyProvider } from "@/lib/providers";
 
 // 13.2：全站默认分享卡片（微信群/朋友圈转发显示图文卡片）
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [loc, user] = await Promise.all([getVisitorLocation(), getCurrentUser().catch(() => null)]);
+  const myShop = await getMyProvider(user?.id).catch(() => null);
   return (
     <html lang="zh-CN">
       <body className="antialiased">
@@ -63,7 +65,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           </div>
         </header>
         <main className="mx-auto min-h-[70vh] max-w-2xl px-4 pb-8">{children}</main>
-        <Footer />
+        <Footer hasShop={!!myShop} />
       </body>
     </html>
   );

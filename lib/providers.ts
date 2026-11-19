@@ -5,11 +5,14 @@ import { PAGE_SIZE, ROTATION_POOL_PER_CATEGORY } from "@/constants/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { chicagoDateString, chicagoDayBounds, dayIndexFor, pickDailyRotation, pickHomeRotation } from "@/lib/rotation";
+import { expandSearchTerms, matchingCategoryIds } from "@/lib/search";
 import { PUBLIC_PROVIDER_COLUMNS, type PublicProvider } from "@/lib/types";
 
 export interface ListFilters {
   cityId: string;
   category?: string;
+  /** 大类筛选：传一组细分类 id（category 优先） */
+  categories?: string[];
   area?: string;
   q?: string;
   page?: number;
@@ -47,6 +50,15 @@ export async function getTodayRotation(cityId: string, category?: string): Promi
   const picked = pickHomeRotation(perCategory, dayIndex);
   recordRotationLazily(cityId, "home_rotation", null, picked, date);
   return picked;
+}
+
+/** 大类页的今日轮换：从这个大类的几个细分类里各取轮换池，规则同首页（只展示，不写 ad_placements） */
+export async function getGroupRotation(cityId: string, categoryIds: string[]): Promise<PublicProvider[]> {
+  const dayIndex = dayIndexFor(chicagoDateString());
+  const perCategory = await Promise.all(
+    categoryIds.map(async (c) => pickDailyRotation(await rotationPool(cityId, c), dayIndex)),
+  );
+  return pickHomeRotation(perCategory, dayIndex);
 }
 
 /** 13.1 第 5 步：当天第一次请求时顺带写 ad_placements（响应发出后再写，不拖慢页面） */
@@ -91,6 +103,14 @@ function recordRotationLazily(
   });
 }
 
+/** 推荐内容（修了什么、评语）里包含关键词的商家 id；只看公开的 active 推荐 */
+async function providerIdsFromRecommendations(terms: string[]): Promise<string[]> {
+  const supabase = await createClient();
+  const conds = terms.flatMap((t) => [`service_item.ilike.%${t}%`, `comment.ilike.%${t}%`]).join(",");
+  const { data } = await supabase.from("recommendations").select("provider_id").eq("status", "active").or(conds).limit(500);
+  return [...new Set((data ?? []).map((r) => r.provider_id as string))].filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+}
+
 /** 列表：轮换之后按推荐数降序 → 创建时间降序，每页 20 条 */
 export async function listProviders(f: ListFilters, excludeIds: string[] = []) {
   const supabase = await createClient();
@@ -101,14 +121,27 @@ export async function listProviders(f: ListFilters, excludeIds: string[] = []) {
     .eq("city_id", f.cityId)
     .in("status", ["active", "paused"]);
   if (f.category) query = query.eq("category", f.category);
+  else if (f.categories?.length) query = query.in("category", f.categories);
   if (f.area) query = query.contains("service_areas", [f.area]);
   if (f.q) {
-    // 只搜名字、服务名、标语、简介、标签；不支持按电话搜（防爬）
-    const term = f.q.replace(/[%,()*]/g, " ").trim().slice(0, 30);
-    if (term) {
-      query = query.or(
-        `name.ilike.%${term}%,custom_service.ilike.%${term}%,tagline.ilike.%${term}%,description.ilike.%${term}%,sub_tags.cs.{"${term.replace(/"/g, "")}"}`,
-      );
+    // 部分匹配：商家名、服务名、标语、简介、标签、分类名、邻居推荐里的“修了什么”和评语。
+    // 不支持按电话/微信搜（防爬），结果也只返回公开字段。
+    const terms = expandSearchTerms(f.q);
+    if (terms.length) {
+      const [categoryIds, recommendedIds] = await Promise.all([
+        Promise.resolve(matchingCategoryIds(terms)),
+        providerIdsFromRecommendations(terms),
+      ]);
+      const conds = terms.flatMap((t) => [
+        `name.ilike.%${t}%`,
+        `custom_service.ilike.%${t}%`,
+        `tagline.ilike.%${t}%`,
+        `description.ilike.%${t}%`,
+        `sub_tags.cs.{"${t}"}`,
+      ]);
+      if (categoryIds.length) conds.push(`category.in.(${categoryIds.join(",")})`);
+      if (recommendedIds.length) conds.push(`id.in.(${recommendedIds.join(",")})`);
+      query = query.or(conds.join(","));
     }
   }
   if (excludeIds.length) query = query.not("id", "in", `(${excludeIds.join(",")})`);
@@ -140,4 +173,11 @@ export async function foundingSlotsLeft(): Promise<number> {
     .select("id", { count: "exact", head: true })
     .not("founding_rank", "is", null);
   return Math.max(0, FOUNDING_SLOTS - (count ?? 0));
+}
+
+/** 当前登录用户自己的店（没有就 null）。用于首页/页脚把“免费注册”换成“管理我的名片” */
+export async function getMyProvider(userId: string | null | undefined): Promise<{ id: string; name: string } | null> {
+  if (!userId) return null;
+  const { data } = await createAdminClient().from("providers").select("id, name").eq("owner_user_id", userId).maybeSingle();
+  return data ?? null;
 }

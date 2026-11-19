@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ContactButtons from "@/components/ContactButtons";
-import CopyLinkButton from "@/components/CopyLinkButton";
 import ProviderCard from "@/components/ProviderCard";
 import ReportButton from "@/components/ReportButton";
 import { providerCategoryLabel } from "@/constants/categories";
@@ -26,6 +25,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = `${p.recommend_count}位邻居推荐 · 服务区域：${p.service_areas.join(" / ")}。${
     p.tagline || p.description?.slice(0, 50) || ""
   }`;
+  // 有头像就用头像做分享卡片的小图（微信卡片是方形小图，头像正合适），没有就用站点默认图
+  const images = p.avatar_url
+    ? [{ url: p.avatar_url, alt: p.name }]
+    : [{ url: "/og-default.png", width: 1200, height: 630, alt: title }];
   return {
     title: { absolute: title },
     description,
@@ -34,9 +37,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: `/provider/${p.id}`,
-      images: [{ url: "/og-default.png", width: 1200, height: 630, alt: title }],
+      images,
     },
-    twitter: { card: "summary_large_image", title, description, images: ["/og-default.png"] },
+    twitter: { card: p.avatar_url ? "summary" : "summary_large_image", title, description, images: [images[0].url] },
   };
 }
 
@@ -85,10 +88,9 @@ export default async function ProviderPage({ params }: Props) {
         </div>
         {licenseUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={licenseUrl} alt="商家上传的执照照片" className="mt-3 max-h-64 rounded-lg border" />
+          <img src={licenseUrl} alt="商家上传的执照照片" className="mt-3 max-h-64 max-w-full rounded-lg border object-contain" />
         )}
-        <div className="mt-3 flex items-center justify-between">
-          <CopyLinkButton />
+        <div className="mt-3 flex items-center justify-end">
           <ReportButton targetType="provider" targetId={p.id} />
         </div>
       </section>
