@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 /** 7.2 第一步：电话查重。已存在 → 跳详情页写推荐；不存在 → 填新商家 + 推荐 */
-export default function PhoneCheck() {
+export default function PhoneCheck({ askId }: { askId?: string }) {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const askQs = askId ? `&ask=${askId}` : "";
 
   async function check(e: React.FormEvent) {
     e.preventDefault();
@@ -22,9 +24,9 @@ export default function PhoneCheck() {
     const json = await res.json();
     setLoading(false);
     if (!res.ok) return setMsg("电话格式不对，请填 10 位美国号码");
-    if (json.exists && json.providerId) return router.push(`/recommend?provider=${json.providerId}`);
+    if (json.exists && json.providerId) return router.push(`/recommend?provider=${json.providerId}${askQs}`);
     if (json.exists) return setMsg("这个电话已经有人登记了，正在等站长审核，过一两天再来推荐吧。");
-    router.push(`/recommend?new=1&phone=${encodeURIComponent(phone)}`);
+    router.push(`/recommend?new=1&phone=${encodeURIComponent(phone)}${askQs}`);
   }
 
   return (
