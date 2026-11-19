@@ -46,6 +46,17 @@ export async function saveArea(area: string | null) {
   revalidatePath("/", "layout");
 }
 
+/** 没开通城市的访客点“附近已开通”的片区：Zip 换成该片区的代表 Zip，并选中片区 */
+export async function switchToArea(zip: string, area: string): Promise<{ ok: boolean; error?: string }> {
+  const city = cityForZip(zip);
+  if (!city || city.areaZips[area] !== zip) return { ok: false, error: "这个片区不对" };
+  const res = await saveZip(zip);
+  if (!res.ok) return { ok: false, error: res.error };
+  (await cookies()).set(AREA_COOKIE, area, { maxAge: YEAR, path: "/", sameSite: "lax" });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export async function joinWaitlist(formData: FormData): Promise<{ ok: boolean; error?: string }> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const zip = String(formData.get("zip") ?? "").trim();
