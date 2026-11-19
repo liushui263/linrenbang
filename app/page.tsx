@@ -1,7 +1,8 @@
 import Link from "next/link";
 import AreaSelect from "@/components/AreaSelect";
 import ProviderCard from "@/components/ProviderCard";
-import WaitlistForm from "@/components/WaitlistForm";
+import UnsupportedCityNotice from "@/components/UnsupportedCityNotice";
+import { nearbyLiveCities } from "@/constants/cities";
 import {
   CATEGORIES,
   CATEGORY_GROUPS,
@@ -235,15 +236,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="space-y-5 sm:pt-4">
-      {loc.zip && !loc.zipCity && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <p>
-            你所在的城市（Zip {loc.zip}）还没开通，留个邮箱，有消息通知你。
-            <br />
-            <strong>当前查看：{loc.city.zh}</strong>
-          </p>
-          <WaitlistForm zip={loc.zip} />
-        </div>
+      {loc.zip && !loc.zipCity && !loc.cityNoticeDismissed && (
+        <UnsupportedCityNotice
+          zip={loc.zip}
+          viewingCity={loc.city.zh}
+          nearby={nearbyLiveCities(loc.zip).map((c) => ({
+            zh: c.zh,
+            areas: c.areas.filter((a) => c.areaZips[a]).map((a) => ({ area: a, zip: c.areaZips[a] })),
+          }))}
+        />
       )}
 
       <section className="hero-bg relative -mx-4 overflow-hidden px-5 pb-5 pt-4 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:px-7 sm:pt-6">

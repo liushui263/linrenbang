@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { cityForZip, getCity, isValidZip, type City } from "@/constants/cities";
+import { CITY_NOTICE_COOKIE, cityForZip, getCity, isValidZip, type City } from "@/constants/cities";
 
 export const ZIP_COOKIE = "lrb_zip";
 export const AREA_COOKIE = "lrb_area";
@@ -11,6 +11,7 @@ export interface VisitorLocation {
   city: City; // 当前查看的城市
   zipCity: City | null; // Zip 对应的已开通城市；null 表示没开通
   area: string | null; // 访客片区
+  cityNoticeDismissed: boolean; // 访客已经关掉了这个 Zip 的“没开通”提示
 }
 
 export async function getVisitorLocation(): Promise<VisitorLocation> {
@@ -21,5 +22,6 @@ export async function getVisitorLocation(): Promise<VisitorLocation> {
   const city = zipCity ?? getCity(null); // 没开通的 Zip 继续看休斯顿
   const areaRaw = store.get(AREA_COOKIE)?.value ?? null;
   const area = areaRaw && city.areas.includes(areaRaw) ? areaRaw : null;
-  return { zip, hasChosen: raw !== null, city, zipCity, area };
+  const cityNoticeDismissed = !!zip && store.get(CITY_NOTICE_COOKIE)?.value === zip;
+  return { zip, hasChosen: raw !== null, city, zipCity, area, cityNoticeDismissed };
 }
