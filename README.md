@@ -40,5 +40,6 @@ npm run lint && npm run typecheck
 | 双语免责声明（13.4） | `components/Footer.tsx` | 每页底部 |
 | 只开 Google 登录（13.5） | `/login` | 手机号、微信按钮灰显“暂不支持” |
 | 电话微信防爬（13.6） | `app/api/providers/[id]/contact`、SQL 列权限 | 页面源码里没有电话和微信；前端 anon key 读不到这两列；点按钮才取，同一 IP 每小时最多 30 次 |
+| 季节提醒 | `constants/seasonal.ts`（站长直接改）、`/season/[id]` | 按芝加哥月份自动上首页；每条有分享页、微信分享卡片图（`opengraph-image`）和可长按保存的竖版海报（`/season/{id}/poster.png`），图上只有师傅名字不含电话 |
 
 **安全边界**：前端的 anon key 只能读公开数据，所有写操作都走服务端（Server Action + service role），服务端负责校验登录、归属和站长白名单。
