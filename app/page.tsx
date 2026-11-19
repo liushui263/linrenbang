@@ -22,6 +22,8 @@ export const dynamic = "force-dynamic";
 interface SP {
   category?: string;
   group?: string;
+  /** 搜索页多选的大类，逗号分隔 */
+  groups?: string;
   q?: string;
   page?: string;
 }
@@ -125,6 +127,24 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const q = sp.q?.trim() || undefined;
   const page = Math.max(1, Number(sp.page) || 1);
 
+  // 搜索页可以多选大类（?groups=a,b）；从首页带过来的 group / 单分类大类也算进去。
+  // 选的是多细分类大类里的某一个细分类（如空调暖气）时，单独作为一个已选项。
+  const fineCategory = category && (groupOfCategory(category)?.categories.length ?? 0) > 1 ? category : undefined;
+  const searchGroups: CategoryGroup[] = [];
+  if (q) {
+    const ids = [...(sp.groups?.split(",") ?? []), ...(group && !fineCategory ? [group.id] : [])];
+    for (const id of ids) {
+      const g = findGroup(id);
+      if (g && !searchGroups.includes(g)) searchGroups.push(g);
+    }
+  }
+  const searchCategory =
+    q && fineCategory && !searchGroups.some((g) => g.categories.includes(fineCategory)) ? fineCategory : undefined;
+  const searchCats = [...searchGroups.flatMap((g) => g.categories), ...(searchCategory ? [searchCategory] : [])];
+  const searchHref = (groups: CategoryGroup[], cat?: string, pageNo?: number) =>
+    href({ q, groups: groups.map((g) => g.id).join(",") || undefined, category: cat, page: pageNo ? String(pageNo) : undefined });
+  const pageHref = (n: number) => (q ? searchHref(searchGroups, searchCategory, n) : href({ category, group: groupParam, page: String(n) }));
+
   // 搜索时不显示轮换；轮换在所有页都从列表里排除，保证翻页不重复
   const rotation = q
     ? []
@@ -132,7 +152,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ? await getGroupRotation(loc.city.id, group.categories)
       : await getTodayRotation(loc.city.id, category);
   const list = await listProviders(
-    { cityId: loc.city.id, category, categories: groupParam ? group?.categories : undefined, area: loc.area ?? undefined, q, page },
+    q
+      ? { cityId: loc.city.id, categories: searchCats.length ? searchCats : undefined, area: loc.area ?? undefined, q, page }
+      : { cityId: loc.city.id, category, categories: groupParam ? group?.categories : undefined, area: loc.area ?? undefined, page },
     rotation.map((p) => p.id),
   );
   const showRotation = rotation.length > 0 && page === 1;
@@ -140,10 +162,59 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const label = scopeName ?? (q ? `“${q}”` : "师傅");
   const where = `${loc.city.zh}${loc.area ? ` · ${loc.area}` : ""}`;
 
+  const selectedNames = [...searchGroups.map((g) => g.zh), ...(searchCategory ? [categoryName(searchCategory)] : [])];
+  const chipBase = "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs sm:text-sm";
+  // 搜索页的分类筛选：上面一行是已选（点 ✕ 去掉），下面一行是还能加的大类（可多选）
+  const filterPanel = q && (
+    <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 first:mt-0 first:border-0 first:pt-0">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-xs text-gray-500">已选分类：</span>
+        {selectedNames.length === 0 && <span className="text-xs text-gray-700">全部</span>}
+        {searchGroups.map((g) => (
+          <Link
+            key={g.id}
+            href={searchHref(searchGroups.filter((x) => x !== g), searchCategory)}
+            className={`${chipBase} bg-emerald-600 text-white`}
+            aria-label={`去掉分类：${g.zh}`}
+          >
+            {g.icon} {g.zh} <span aria-hidden="true">✕</span>
+          </Link>
+        ))}
+        {searchCategory && (
+          <Link href={searchHref(searchGroups)} className={`${chipBase} bg-emerald-600 text-white`} aria-label={`去掉分类：${categoryName(searchCategory)}`}>
+            {categoryName(searchCategory)} <span aria-hidden="true">✕</span>
+          </Link>
+        )}
+        {selectedNames.length > 1 && (
+          <Link href={searchHref([])} className="text-xs text-emerald-700 underline">
+            全部清除
+          </Link>
+        )}
+      </div>
+      {searchGroups.length < CATEGORY_GROUPS.length && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-gray-500">{selectedNames.length ? "再加分类：" : "按分类筛选（可多选）："}</span>
+          {CATEGORY_GROUPS.filter((g) => !searchGroups.includes(g)).map((g) => (
+            <Link
+              key={g.id}
+              href={searchHref(
+                [...searchGroups, g],
+                searchCategory && g.categories.includes(searchCategory) ? undefined : searchCategory,
+              )}
+              className={`${chipBase} bg-gray-100 text-slate-700`}
+            >
+              + {g.zh}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   const pager = list.pageCount > 1 && (
     <div className="mt-4 flex items-center justify-between text-sm">
       {page > 1 ? (
-        <Link href={href({ category, group: groupParam, q, page: String(page - 1) })} className="text-emerald-700">
+        <Link href={pageHref(page - 1)} className="text-emerald-700">
           ← 上一页
         </Link>
       ) : (
@@ -153,7 +224,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         {page} / {list.pageCount}
       </span>
       {page < list.pageCount ? (
-        <Link href={href({ category, group: groupParam, q, page: String(page + 1) })} className="text-emerald-700">
+        <Link href={pageHref(page + 1)} className="text-emerald-700">
           下一页 →
         </Link>
       ) : (
@@ -199,8 +270,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </p>
         </div>
         <form action="/" className="relative mt-4 flex gap-2">
-          {category && <input type="hidden" name="category" value={category} />}
-          {groupParam && <input type="hidden" name="group" value={groupParam} />}
+          {q ? (
+            <>
+              {searchGroups.length > 0 && <input type="hidden" name="groups" value={searchGroups.map((g) => g.id).join(",")} />}
+              {searchCategory && <input type="hidden" name="category" value={searchCategory} />}
+            </>
+          ) : (
+            <>
+              {category && <input type="hidden" name="category" value={category} />}
+              {groupParam && <input type="hidden" name="group" value={groupParam} />}
+            </>
+          )}
           <input
             name="q"
             defaultValue={q}
@@ -211,9 +291,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </form>
         <div className="relative mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-900">
           <AreaSelect areas={loc.city.areas} value={loc.area} />
-          {category || group || q ? (
-            <Link href="/" className="text-sm text-emerald-50 underline">
-              清除筛选
+          {q ? null : scopeName ? (
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-xs text-white ring-1 ring-white/40"
+              aria-label={`取消分类：${scopeName}`}
+            >
+              已选：{scopeName} <span aria-hidden="true">✕</span>
             </Link>
           ) : (
             <span className="text-xs text-emerald-100">
@@ -241,22 +325,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   <p className="font-bold text-gray-900">
                     找到 <span className="text-emerald-700">{list.total}</span> 家 · “{q}”
                   </p>
-                  <Link href={href({ category, group: groupParam })} className="shrink-0 text-xs text-emerald-700 underline">
+                  <Link href="/" className="shrink-0 text-xs text-emerald-700 underline">
                     清除搜索
                   </Link>
                 </div>
                 <p className="mt-0.5 text-xs text-gray-500">
-                  {where}
-                  {scopeName ? ` · 只看${scopeName}` : ""} · 按邻居推荐数排序
-                  {scopeName && (
-                    <>
-                      {" · "}
-                      <Link href={href({ q })} className="text-emerald-700 underline">
-                        在全部分类里搜
-                      </Link>
-                    </>
-                  )}
+                  {where} · {selectedNames.length ? `在 ${selectedNames.length} 个分类里` : "全部分类"} · 按邻居推荐数排序
                 </p>
+                {filterPanel}
               </div>
               {list.providers.map((p) => (
                 <ProviderCard key={p.id} provider={p} />
@@ -278,47 +354,40 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               </p>
             </section>
           ) : (
-            <section id="results" aria-live="polite" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <p className="text-base font-bold">
-                没找到和“{q}”相关的{scopeName ? `${scopeName}` : ""}师傅
-              </p>
-              <p className="mt-1">
-                {where}暂时没有。可以换个说法试试
-                {scopeName && (
-                  <>
-                    ，或者
-                    <Link href={href({ q })} className="underline">
-                      在全部分类里搜
-                    </Link>
-                  </>
-                )}
-                ，也可以从下面的分类里找。
-              </p>
-              <div className="mt-3 flex gap-2">
-                <Link href="/recommend" className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-center font-medium text-white">
-                  我知道一个，推荐他
-                </Link>
-                {!myShop && (
-                  <Link
-                    href="/merchant/register"
-                    className="flex-1 rounded-xl border border-emerald-600 bg-white py-2.5 text-center font-medium text-emerald-700"
-                  >
-                    我是商家，免费注册
+            <section id="results" aria-live="polite" className="space-y-3">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <p className="text-base font-bold">
+                  没找到和“{q}”相关的{selectedNames.length ? selectedNames.join("、") : ""}师傅
+                </p>
+                <p className="mt-1">
+                  {where}暂时没有。可以换个说法试试
+                  {selectedNames.length > 0 && (
+                    <>
+                      ，或者
+                      <Link href={searchHref([])} className="underline">
+                        在全部分类里搜
+                      </Link>
+                    </>
+                  )}
+                  。
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Link href="/recommend" className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-center font-medium text-white">
+                    我知道一个，推荐他
                   </Link>
-                )}
+                  {!myShop && (
+                    <Link
+                      href="/merchant/register"
+                      className="flex-1 rounded-xl border border-emerald-600 bg-white py-2.5 text-center font-medium text-emerald-700"
+                    >
+                      我是商家，免费注册
+                    </Link>
+                  )}
+                </div>
               </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-3">{filterPanel}</div>
             </section>
           )}
-
-          <details open={list.total === 0} className="group">
-            <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 [&::-webkit-details-marker]:hidden">
-              按分类浏览
-              <span className="transition group-open:rotate-90">▸</span>
-            </summary>
-            <div className="mt-2">
-              <CategoryNav category={category} group={group} q={q} />
-            </div>
-          </details>
         </>
       ) : (
         <>
