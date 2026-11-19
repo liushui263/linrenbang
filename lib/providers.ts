@@ -16,7 +16,10 @@ export interface ListFilters {
   page?: number;
 }
 
-/** 某城市某分类的轮换池：active、创始有效期内、通过最早的 10 家（paused 自动退出） */
+/**
+ * 某城市某分类的轮换池：active、创始有效期内、通过最早的 10 家（paused 自动退出）。
+ * 只按主营分类（category）算：选了 3 个分类的商家不会因此多拿 3 倍首页曝光。
+ */
 async function rotationPool(cityId: string, category: string): Promise<PublicProvider[]> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -109,7 +112,8 @@ export async function listProviders(f: ListFilters, excludeIds: string[] = []) {
     .select(PUBLIC_PROVIDER_COLUMNS, { count: "exact" })
     .eq("city_id", f.cityId)
     .in("status", ["active", "paused"]);
-  if (f.category) query = query.eq("category", f.category);
+  // 商家最多 3 个分类，在每个分类下都能被找到
+  if (f.category) query = query.contains("categories", [f.category]);
   if (f.area) query = query.contains("service_areas", [f.area]);
   if (f.q) {
     // 部分匹配：商家名、服务名、标语、简介、标签、分类名、邻居推荐里的“修了什么”和评语。
@@ -127,7 +131,7 @@ export async function listProviders(f: ListFilters, excludeIds: string[] = []) {
         `description.ilike.%${t}%`,
         `sub_tags.cs.{"${t}"}`,
       ]);
-      if (categoryIds.length) conds.push(`category.in.(${categoryIds.join(",")})`);
+      if (categoryIds.length) conds.push(`categories.ov.{${categoryIds.join(",")}}`);
       if (recommendedIds.length) conds.push(`id.in.(${recommendedIds.join(",")})`);
       query = query.or(conds.join(","));
     }

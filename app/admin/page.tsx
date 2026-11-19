@@ -10,7 +10,7 @@ import {
   rejectClaim,
   resolveReport,
 } from "@/app/actions/admin";
-import { providerCategoryLabel } from "@/constants/categories";
+import { providerCategories, providerCategoryLabel } from "@/constants/categories";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { formatUsPhone } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -55,7 +55,7 @@ export default async function AdminPage() {
   const [providers, recs, reports, claims, foundingCount, others] = await Promise.all([
     admin
       .from("providers")
-      .select("id, name, category, custom_service, phone, wechat_id, service_areas, tagline, description, source, price_note, created_at")
+      .select("id, name, category, categories, custom_service, phone, wechat_id, service_areas, tagline, description, source, price_note, created_at")
       .eq("status", "pending")
       .order("created_at"),
     admin
@@ -70,7 +70,7 @@ export default async function AdminPage() {
       .eq("status", "pending")
       .order("created_at"),
     admin.from("providers").select("id", { count: "exact", head: true }).not("founding_rank", "is", null),
-    admin.from("providers").select("custom_service").eq("category", "other").neq("status", "hidden"),
+    admin.from("providers").select("custom_service").contains("categories", ["other"]).neq("status", "hidden"),
   ]);
 
   // “其他服务”里哪些服务名出现得多，方便以后升级成正式分类
@@ -113,7 +113,7 @@ export default async function AdminPage() {
             <div key={p.id} className="rounded-2xl bg-white p-4 text-sm">
               <div className="font-semibold">
                 {p.name} · {providerCategoryLabel(p)}
-                {p.category === "other" && <span className="ml-2 rounded bg-purple-50 px-1.5 text-xs text-purple-700">其他服务</span>}
+                {providerCategories(p).includes("other") && <span className="ml-2 rounded bg-purple-50 px-1.5 text-xs text-purple-700">其他服务</span>}
                 {p.source === "neighbor_submitted" && <span className="ml-2 text-xs text-blue-600">邻居代录入</span>}
               </div>
               <div className="text-gray-600">

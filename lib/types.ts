@@ -1,13 +1,16 @@
 /** 公开可读的商家字段（不含 phone / wechat_id，见规格 13.6） */
 export const PUBLIC_PROVIDER_COLUMNS =
-  "id, city_id, source, name, category, custom_service, sub_tags, service_areas, service_zips, has_wechat, languages, avatar_url, tagline, is_licensed, license_status, is_insured, emergency_24h, price_note, description, recommend_count, is_claimed, status, is_founding, founding_rank, founding_started_at, founding_expires_at, category_rank, approved_at, created_at";
+  "id, city_id, source, name, category, categories, custom_service, sub_tags, service_areas, service_zips, has_wechat, languages, avatar_url, tagline, is_licensed, license_status, is_insured, emergency_24h, price_note, description, recommend_count, is_claimed, status, is_founding, founding_rank, founding_started_at, founding_expires_at, category_rank, approved_at, created_at";
 
 export interface PublicProvider {
   id: string;
   city_id: string;
   source: string;
   name: string;
+  /** 主营分类，等于 categories[0] */
   category: string;
+  /** 1-3 个分类，第一个是主营 */
+  categories: string[];
   custom_service: string | null;
   sub_tags: string[];
   service_areas: string[];

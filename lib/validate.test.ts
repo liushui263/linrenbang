@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { validateField, validateForm } from "./validate";
+import { providerCategoryLabel, providerCategoryLabels } from "@/constants/categories";
+import { parseProviderForm } from "./provider-form";
+import { selectedCategories, validateField, validateForm } from "./validate";
 
 const fd = (o: Record<string, string | string[]>) => {
   const f = new FormData();
@@ -39,7 +41,36 @@ describe("custom_service", () => {
 
 describe("validateForm", () => {
   it("collects all errors", () => {
-    const errs = validateForm(fd({ name: "", phone: "1" }), ["name", "phone", "category"]);
-    expect(Object.keys(errs)).toEqual(["name", "phone", "category"]);
+    const errs = validateForm(fd({ name: "", phone: "1" }), ["name", "phone", "categories"]);
+    expect(Object.keys(errs)).toEqual(["name", "phone", "categories"]);
+  });
+});
+
+describe("multiple categories", () => {
+  it("puts the primary first and dedupes", () => {
+    expect(selectedCategories(fd({ categories: ["hvac", "plumbing"], primary_category: "plumbing" }))).toEqual(["plumbing", "hvac"]);
+    expect(selectedCategories(fd({ categories: ["hvac", "hvac"] }))).toEqual(["hvac"]);
+    expect(selectedCategories(fd({ category: "roof" }))).toEqual(["roof"]);
+  });
+  it("allows 1 to 3", () => {
+    expect(validateField("categories", fd({}))).toMatch(/至少/);
+    expect(validateField("categories", fd({ categories: ["hvac", "plumbing", "roof"] }))).toBeNull();
+    expect(validateField("categories", fd({ categories: ["hvac", "plumbing", "roof", "pest"] }))).toMatch(/最多选 3/);
+  });
+  it("needs a service name when other is any of them", () => {
+    expect(validateField("custom_service", fd({ categories: ["hvac", "other"] }))).toMatch(/具体做什么/);
+    expect(validateField("custom_service", fd({ categories: ["hvac", "other"], custom_service: "钢琴课" }))).toBeNull();
+  });
+  it("parses into category + categories", () => {
+    const r = parseProviderForm(
+      fd({ name: "老王", categories: ["hvac", "plumbing", "bogus"], primary_category: "plumbing", city_id: "houston", service_areas: ["Katy"], phone: "713-555-0123" }),
+    );
+    expect(r.data?.category).toBe("plumbing");
+    expect(r.data?.categories).toEqual(["plumbing", "hvac"]);
+  });
+  it("labels every category", () => {
+    const p = { category: "hvac", categories: ["hvac", "other"], custom_service: "钢琴课" };
+    expect(providerCategoryLabels(p)).toEqual(["空调暖气", "钢琴课"]);
+    expect(providerCategoryLabel({ category: "roof" })).toBe("屋顶防漏");
   });
 });
