@@ -5,6 +5,7 @@ import { PAGE_SIZE, ROTATION_POOL_PER_CATEGORY } from "@/constants/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { chicagoDateString, chicagoDayBounds, dayIndexFor, pickDailyRotation, pickHomeRotation } from "@/lib/rotation";
+import { expandSearchTerms, matchingCategoryIds } from "@/lib/search";
 import { PUBLIC_PROVIDER_COLUMNS, type PublicProvider } from "@/lib/types";
 
 export interface ListFilters {
@@ -91,6 +92,14 @@ function recordRotationLazily(
   });
 }
 
+/** 推荐内容（修了什么、评语）里包含关键词的商家 id；只看公开的 active 推荐 */
+async function providerIdsFromRecommendations(terms: string[]): Promise<string[]> {
+  const supabase = await createClient();
+  const conds = terms.flatMap((t) => [`service_item.ilike.%${t}%`, `comment.ilike.%${t}%`]).join(",");
+  const { data } = await supabase.from("recommendations").select("provider_id").eq("status", "active").or(conds).limit(500);
+  return [...new Set((data ?? []).map((r) => r.provider_id as string))].filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+}
+
 /** 列表：轮换之后按推荐数降序 → 创建时间降序，每页 20 条 */
 export async function listProviders(f: ListFilters, excludeIds: string[] = []) {
   const supabase = await createClient();
@@ -103,12 +112,24 @@ export async function listProviders(f: ListFilters, excludeIds: string[] = []) {
   if (f.category) query = query.eq("category", f.category);
   if (f.area) query = query.contains("service_areas", [f.area]);
   if (f.q) {
-    // 只搜名字、服务名、标语、简介、标签；不支持按电话搜（防爬）
-    const term = f.q.replace(/[%,()*]/g, " ").trim().slice(0, 30);
-    if (term) {
-      query = query.or(
-        `name.ilike.%${term}%,custom_service.ilike.%${term}%,tagline.ilike.%${term}%,description.ilike.%${term}%,sub_tags.cs.{"${term.replace(/"/g, "")}"}`,
-      );
+    // 部分匹配：商家名、服务名、标语、简介、标签、分类名、邻居推荐里的“修了什么”和评语。
+    // 不支持按电话/微信搜（防爬），结果也只返回公开字段。
+    const terms = expandSearchTerms(f.q);
+    if (terms.length) {
+      const [categoryIds, recommendedIds] = await Promise.all([
+        Promise.resolve(matchingCategoryIds(terms)),
+        providerIdsFromRecommendations(terms),
+      ]);
+      const conds = terms.flatMap((t) => [
+        `name.ilike.%${t}%`,
+        `custom_service.ilike.%${t}%`,
+        `tagline.ilike.%${t}%`,
+        `description.ilike.%${t}%`,
+        `sub_tags.cs.{"${t}"}`,
+      ]);
+      if (categoryIds.length) conds.push(`category.in.(${categoryIds.join(",")})`);
+      if (recommendedIds.length) conds.push(`id.in.(${recommendedIds.join(",")})`);
+      query = query.or(conds.join(","));
     }
   }
   if (excludeIds.length) query = query.not("id", "in", `(${excludeIds.join(",")})`);
