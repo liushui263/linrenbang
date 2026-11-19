@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
+import RecommenderImpact from "@/components/RecommenderImpact";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -44,6 +45,9 @@ export default async function MePage() {
           </div>
         )}
       </section>
+
+      {/* 推荐有回音：自成一块 */}
+      <RecommenderImpact userId={user.id} />
 
       <section className="rounded-2xl bg-white p-4">
         <h2 className="font-semibold">我写的推荐</h2>
