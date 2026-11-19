@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
+import MyFavorites from "@/components/MyFavorites";
+import RecommenderImpact from "@/components/RecommenderImpact";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -34,6 +36,8 @@ export default async function MePage() {
         <p className="text-sm text-gray-500">{user.email}</p>
       </div>
 
+      <MyFavorites userId={user.id} />
+
       <section className="rounded-2xl bg-white p-4">
         <h2 className="font-semibold">我的店</h2>
         {provider ? (
@@ -51,6 +55,9 @@ export default async function MePage() {
           </div>
         )}
       </section>
+
+      {/* 推荐有回音：自成一块 */}
+      <RecommenderImpact userId={user.id} />
 
       <section className="rounded-2xl bg-white p-4">
         <h2 className="font-semibold">我的求推荐</h2>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import AreaSelect from "@/components/AreaSelect";
 import { AskRow } from "@/components/AskCard";
 import ProviderCard from "@/components/ProviderCard";
+import SeasonalCard from "@/components/SeasonalCard";
 import UnsupportedCityNotice from "@/components/UnsupportedCityNotice";
 import { nearbyLiveCities } from "@/constants/cities";
 import {
@@ -19,7 +20,8 @@ import { HOME_ASK_COUNT, titleFromSearch } from "@/lib/ask";
 import { getLatestAsks, similarAsks } from "@/lib/asks";
 import { getVisitorLocation } from "@/lib/location";
 import { getCurrentUser } from "@/lib/auth";
-import { getGroupRotation, getMyProvider, getTodayRotation, listProviders } from "@/lib/providers";
+import { getGroupRotation, getMyProvider, getSeasonalPicks, getTodayRotation, listProviders } from "@/lib/providers";
+import { currentReminders } from "@/lib/seasonal";
 
 export const dynamic = "force-dynamic";
 
@@ -171,6 +173,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const askPrefill = q
     ? `/ask/new?${new URLSearchParams({ q, ...(loc.area && { area: loc.area }), ...(searchGroups.length === 1 && { group: searchGroups[0].id }) })}`
     : "/ask/new";
+
+  // 季节提醒：只在首页本身（没搜索、没选分类、第 1 页）显示当月第一条
+  const [season, ...otherSeasons] = !q && !category && !group && page === 1 ? currentReminders() : [];
+  const seasonPicks = season ? await getSeasonalPicks(loc.city.id, season.categories, 2).catch(() => []) : [];
   const scopeName = category ? categoryName(category) : group ? group.zh : undefined;
   const label = scopeName ?? (q ? `“${q}”` : "师傅");
   const where = `${loc.city.zh}${loc.area ? ` · ${loc.area}` : ""}`;
@@ -423,6 +429,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </>
       ) : (
         <>
+          {season && <SeasonalCard reminder={season} picks={seasonPicks} others={otherSeasons} />}
+
           {showRotation && (
             <section>
               <h2 className="mb-2 flex items-baseline justify-between font-bold text-gray-900">

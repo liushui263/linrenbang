@@ -3,16 +3,19 @@ import { providerCategoryLabel, providerCategoryLabels } from "@/constants/categ
 import { foundingDaysLeft, isFoundingActive } from "@/lib/rotation";
 import type { PublicProvider } from "@/lib/types";
 import ContactButtons from "./ContactButtons";
+import FavoriteButton from "./FavoriteButton";
 import ShareButton from "./ShareButton";
 
 interface Props {
   provider: PublicProvider;
   isTodayPick?: boolean;
   expanded?: boolean; // 详情页的展开版
+  /** 已知是收藏状态（“我的师傅”列表），按钮不用再查接口 */
+  favorited?: boolean;
 }
 
 /** 第 8 节名片版式：一个组件，列表和详情页复用 */
-export default function ProviderCard({ provider: p, isTodayPick, expanded }: Props) {
+export default function ProviderCard({ provider: p, isTodayPick, expanded, favorited }: Props) {
   const founding = isFoundingActive(p.founding_expires_at);
   const summary = p.tagline || (p.description ? p.description.slice(0, 60) : "");
   const tags = expanded ? p.sub_tags : p.sub_tags.slice(0, 3);
@@ -93,7 +96,8 @@ export default function ProviderCard({ provider: p, isTodayPick, expanded }: Pro
             {titleRow}
           </Link>
         )}
-        <div className="shrink-0">
+        <div className="flex shrink-0 items-center gap-1.5">
+          <FavoriteButton providerId={p.id} initial={favorited} />
           <ShareButton
             path={`/provider/${p.id}`}
             title={`邻居推荐：${p.name}（${providerCategoryLabel(p)}）`}
