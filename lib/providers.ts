@@ -185,3 +185,18 @@ export async function getMyProvider(userId: string | null | undefined): Promise<
   const { data } = await createAdminClient().from("providers").select("id, name").eq("owner_user_id", userId).maybeSingle();
   return data ?? null;
 }
+
+/** 季节提醒里推荐的师傅：这几个分类里正在接单（active）的，按邻居推荐数排 */
+export async function getSeasonalPicks(cityId: string, categoryIds: string[], limit: number): Promise<PublicProvider[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("providers")
+    .select(PUBLIC_PROVIDER_COLUMNS)
+    .eq("city_id", cityId)
+    .eq("status", "active")
+    .overlaps("categories", categoryIds)
+    .order("recommend_count", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as unknown as PublicProvider[];
+}

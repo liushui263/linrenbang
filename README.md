@@ -41,5 +41,6 @@ npm run lint && npm run typecheck
 | 只开 Google 登录（13.5） | `/login` | 手机号、微信按钮灰显“暂不支持” |
 | 推荐有回音 | `app/api/providers/[id]/event`、`components/RecommenderImpact.tsx`、`0006_recommender_impact.sql` | 详情页查看、一键拨号、复制微信各记一次（只存哈希，每人每天每种只算 1 次，商家本人和推荐人自己不算）；“我的”页面显示“你推荐的 XX，最近 7 天被 N 位邻居查看、M 位拨打”，可转发微信 |
 | 电话微信防爬（13.6） | `app/api/providers/[id]/contact`、SQL 列权限 | 页面源码里没有电话和微信；前端 anon key 读不到这两列；点按钮才取，同一 IP 每小时最多 30 次 |
+| 季节提醒 | `constants/seasonal.ts`（站长直接改）、`/season/[id]` | 按芝加哥月份自动上首页；每条有分享页、微信分享卡片图（`opengraph-image`）和可长按保存的竖版海报（`/season/{id}/poster.png`），图上只有师傅名字不含电话 |
 
 **安全边界**：前端的 anon key 只能读公开数据，所有写操作都走服务端（Server Action + service role），服务端负责校验登录、归属和站长白名单。
