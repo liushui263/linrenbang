@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { providerCategoryLabel } from "@/constants/categories";
+import { providerCategoryLabel, providerCategoryLabels } from "@/constants/categories";
 import { foundingDaysLeft, isFoundingActive } from "@/lib/rotation";
 import type { PublicProvider } from "@/lib/types";
 import ContactButtons from "./ContactButtons";
@@ -39,7 +39,11 @@ export default function ProviderCard({ provider: p, isTodayPick, expanded }: Pro
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate text-lg font-bold text-gray-900">{p.name}</h3>
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{providerCategoryLabel(p)}</span>
+            {providerCategoryLabels(p).map((l) => (
+              <span key={l} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                {l}
+              </span>
+            ))}
           </div>
         </div>
       </div>
