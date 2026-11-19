@@ -53,7 +53,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   { id: "real_estate", zh: "房产服务", icon: "🏠", tint: "#ede9fe", hint: "经纪·贷款·过户", categories: ["realtor", "mortgage_title"] },
   { id: "food", zh: "餐饮美食", icon: "🍜", tint: "#ffedd5", hint: "中餐·外卖·餐饮推荐", categories: ["food"] },
   { id: "finance", zh: "财税保险", icon: "🧾", tint: "#ccfbf1", hint: "税务·财务·保险", categories: ["tax", "finance_insurance"] },
-  { id: "other", zh: "其他本地服务", icon: "⭐", tint: "#fef3c7", hint: "其他生活及专业服务", categories: ["other"] },
+  { id: "other", zh: "其他服务", icon: "⭐", tint: "#fef3c7", hint: "其他生活及专业服务", categories: ["other"] },
 ];
 
 export const HOME_GROUP_COUNT = 6;
