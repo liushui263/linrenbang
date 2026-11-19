@@ -6,7 +6,7 @@ export default function Footer({ hasShop = false }: { hasShop?: boolean }) {
   return (
     <footer className="border-t border-gray-200 bg-white">
       <div className="mx-auto max-w-2xl space-y-2 px-4 py-6 text-xs leading-relaxed text-gray-500">
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-gray-600">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold text-gray-900">
           {hasShop ? <Link href="/merchant">管理我的名片</Link> : <Link href="/merchant/register">商家免费注册</Link>}
           <Link href="/recommend">推荐一位师傅</Link>
           {!hasShop && <Link href="/merchant/claim">认领我的店</Link>}

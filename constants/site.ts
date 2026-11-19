@@ -23,3 +23,6 @@ export const DISCLAIMER_ZH =
   "免责声明：邻人帮仅为本地华人生活信息展示与邻里经验分享平台，不核验商家的州专业执照、商业保险或背景资质，不构成任何官方背书或担保。服务交易与售后纠纷由用户与商家自行协商承担。";
 export const DISCLAIMER_EN =
   "Disclaimer: Linren Bang is an informational community directory only. We do not verify state licenses, insurance, or background credentials, nor do we endorse or guarantee any service provider. Users engage providers at their own discretion and risk.";
+
+/** 首页搜索框下面的热搜词（点了直接搜） */
+export const HOT_SEARCHES = ["换热水器", "空调", "搬家", "报税"];
