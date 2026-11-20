@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: "not_found" }, { status: 404, headers: noStore });
 
   const admin = createAdminClient();
-  const { data: p } = await admin.from("providers").select("id, status, phone, wechat_id").eq("id", id).maybeSingle();
+  const { data: p } = await admin.from("providers").select("id, status, phone, wechat_id, contact_methods").eq("id", id).maybeSingle();
   if (!p || (p.status !== "active" && p.status !== "paused")) {
     return NextResponse.json({ error: "not_found" }, { status: 404, headers: noStore });
   }
@@ -37,5 +37,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
   await admin.from("contact_reveals").insert({ ip_hash: ipHash, provider_id: p.id });
 
-  return NextResponse.json({ phone: p.phone, wechat_id: p.wechat_id || null }, { headers: noStore });
+  // 只返回商家愿意公开的方式：电话 / 短信都用 phone，加微信用 wechat_id
+  const methods: string[] = p.contact_methods ?? ["phone", "sms"];
+  const phone = methods.includes("phone") || methods.includes("sms") ? p.phone : null;
+  const wechat_id = methods.includes("wechat") ? p.wechat_id || null : null;
+  return NextResponse.json({ phone, wechat_id }, { headers: noStore });
 }

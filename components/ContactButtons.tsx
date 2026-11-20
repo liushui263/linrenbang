@@ -1,24 +1,34 @@
 "use client";
 
 import { useState } from "react";
+import { CONTACT_METHODS, SMS_GREETING, type ContactMethod } from "@/constants/site";
 import { formatUsPhone } from "@/lib/phone";
 import { trackProviderEvent } from "@/lib/track";
 
 interface Props {
   providerId: string;
+  methods?: ContactMethod[];
+  pref?: ContactMethod;
   hasWechat: boolean;
   paused: boolean;
 }
 
-type Contact = { phone: string; wechat_id: string | null };
+type Contact = { phone: string | null; wechat_id: string | null };
 
-/** 13.6：电话和微信不在 HTML 里，点按钮才从接口取 */
-export default function ContactButtons({ providerId, hasWechat, paused }: Props) {
+/**
+ * 13.6：电话和微信不在 HTML 里，点按钮才从接口取。
+ * v3.4：商家选的联系方式（打电话 / 发短信 / 加微信），偏好的那个排第一、实心高亮。
+ */
+export default function ContactButtons({ providerId, methods = ["phone", "sms"], pref = "phone", hasWechat, paused }: Props) {
   const [contact, setContact] = useState<Contact | null>(null);
-  const [loading, setLoading] = useState<"call" | "wechat" | null>(null);
+  const [loading, setLoading] = useState<ContactMethod | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [wechatBox, setWechatBox] = useState<string | null>(null);
   const [nowPaused, setNowPaused] = useState(paused);
+
+  const shown = CONTACT_METHODS.filter((m) => methods.includes(m.id) && (m.id !== "wechat" || hasWechat));
+  const ordered = [...shown.filter((m) => m.id === pref), ...shown.filter((m) => m.id !== pref)];
+  const prefLabel = shown.length > 1 ? shown.find((m) => m.id === pref)?.pref : null;
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -46,12 +56,20 @@ export default function ContactButtons({ providerId, hasWechat, paused }: Props)
   }
 
   async function onCall() {
-    setLoading("call");
+    setLoading("phone");
     const c = await fetchContact();
     setLoading(null);
     if (!c?.phone) return;
     trackProviderEvent(providerId, "call");
     window.location.href = `tel:${c.phone}`;
+  }
+
+  async function onSms() {
+    setLoading("sms");
+    const c = await fetchContact();
+    setLoading(null);
+    // “?&body=” 这种写法 iPhone 和安卓都认
+    if (c?.phone) window.location.href = `sms:${c.phone}?&body=${encodeURIComponent(SMS_GREETING)}`;
   }
 
   async function onWechat() {
@@ -92,26 +110,36 @@ export default function ContactButtons({ providerId, hasWechat, paused }: Props)
     );
   }
 
+  const handlers: Record<ContactMethod, () => void> = { phone: onCall, sms: onSms, wechat: onWechat };
+  const labels: Record<ContactMethod, string> = { phone: "一键拨号", sms: "发短信", wechat: "复制微信" };
+  const revealed = [
+    contact?.phone && `电话 ${formatUsPhone(contact.phone)}`,
+    contact?.wechat_id && `微信 ${contact.wechat_id}`,
+  ].filter(Boolean);
+
   return (
     <div className="relative">
+      {prefLabel && <p className="mb-1.5 text-xs font-medium text-emerald-700">★ {prefLabel}</p>}
       <div className="flex gap-2">
-        {hasWechat && (
-          <button
-            onClick={onWechat}
-            disabled={loading !== null}
-            className="flex-1 rounded-xl border border-emerald-600 py-3 text-sm font-medium text-emerald-700 active:bg-emerald-50 disabled:opacity-60"
-          >
-            {loading === "wechat" ? "获取中…" : contact?.wechat_id ? `微信：${contact.wechat_id}` : "复制微信"}
-          </button>
-        )}
-        <button
-          onClick={onCall}
-          disabled={loading !== null}
-          className="flex-1 rounded-xl bg-emerald-600 py-3 text-sm font-medium text-white active:bg-emerald-700 disabled:opacity-60"
-        >
-          {loading === "call" ? "获取中…" : contact ? `拨打 ${formatUsPhone(contact.phone)}` : "一键拨号"}
-        </button>
+        {ordered.map((m) => {
+          const primary = m.id === pref || ordered.length === 1;
+          return (
+            <button
+              key={m.id}
+              onClick={handlers[m.id]}
+              disabled={loading !== null}
+              className={`flex-1 rounded-xl py-3 text-sm font-medium disabled:opacity-60 ${
+                primary
+                  ? "bg-emerald-600 text-white active:bg-emerald-700"
+                  : "border border-emerald-600 text-emerald-700 active:bg-emerald-50"
+              }`}
+            >
+              {loading === m.id ? "获取中…" : labels[m.id]}
+            </button>
+          );
+        })}
       </div>
+      {revealed.length > 0 && <p className="mt-1.5 text-center text-xs text-gray-500">{revealed.join(" · ")}</p>}
 
       {wechatBox && (
         <div className="mt-2 flex items-center gap-2 rounded-xl bg-gray-50 p-3 text-sm">

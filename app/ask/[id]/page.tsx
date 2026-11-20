@@ -98,7 +98,13 @@ function ProviderAnswer({ g, visitorArea, chosen }: { g: AnswerGroup; visitorAre
       </ul>
       {p && (
         <div className="mt-3">
-          <ContactButtons providerId={p.id} hasWechat={p.has_wechat} paused={p.status === "paused"} />
+          <ContactButtons
+            providerId={p.id}
+            methods={p.contact_methods}
+            pref={p.contact_pref}
+            hasWechat={p.has_wechat}
+            paused={p.status === "paused"}
+          />
         </div>
       )}
     </article>

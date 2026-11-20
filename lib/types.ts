@@ -1,6 +1,8 @@
+import type { ContactMethod } from "@/constants/site";
+
 /** 公开可读的商家字段（不含 phone / wechat_id，见规格 13.6） */
 export const PUBLIC_PROVIDER_COLUMNS =
-  "id, city_id, source, name, category, categories, custom_service, sub_tags, service_areas, service_zips, has_wechat, languages, avatar_url, tagline, is_licensed, license_status, is_insured, emergency_24h, price_note, description, recommend_count, is_claimed, status, is_founding, founding_rank, founding_started_at, founding_expires_at, category_rank, approved_at, created_at";
+  "id, city_id, source, name, category, categories, custom_service, sub_tags, service_areas, service_zips, has_wechat, languages, avatar_url, tagline, is_licensed, license_status, is_insured, emergency_24h, price_note, description, recommend_count, is_claimed, status, is_founding, founding_rank, founding_started_at, founding_expires_at, category_rank, approved_at, created_at, contact_methods, contact_pref";
 
 export interface PublicProvider {
   id: string;
@@ -35,6 +37,8 @@ export interface PublicProvider {
   category_rank: number | null;
   approved_at: string | null;
   created_at: string;
+  contact_methods: ContactMethod[];
+  contact_pref: ContactMethod;
 }
 
 export interface PublicRecommendation {
