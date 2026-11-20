@@ -1,5 +1,6 @@
 import { LANGUAGES } from "@/constants/categories";
 import { CITIES } from "@/constants/cities";
+import { CONTACT_METHODS } from "@/constants/site";
 import { FieldError } from "./ActionForm";
 import CategoryPicker from "./CategoryPicker";
 
@@ -21,6 +22,8 @@ export interface ProviderDefaults {
   emergency_24h?: boolean;
   price_note?: string | null;
   description?: string | null;
+  contact_methods?: string[];
+  contact_pref?: string;
 }
 
 const input = "w-full rounded-xl border border-gray-300 bg-white px-3 py-2";
@@ -84,6 +87,7 @@ export default function ProviderFields({
         <input name="wechat_id" maxLength={60} defaultValue={d.wechat_id ?? ""} className={input} />
         <FieldError name="wechat_id" />
       </div>
+      {!minimal && <ContactPrefFields methods={d.contact_methods} pref={d.contact_pref} hasWechat={!!d.wechat_id} />}
       {!minimal && (
         <>
           <div>
@@ -130,5 +134,38 @@ export default function ProviderFields({
         </>
       )}
     </div>
+  );
+}
+
+/** 顾客怎么联系你：可多选，再选一个最希望的（名片上排第一、高亮） */
+function ContactPrefFields({ methods, pref, hasWechat }: { methods?: string[]; pref?: string; hasWechat: boolean }) {
+  const checked = methods ?? (hasWechat ? ["phone", "sms", "wechat"] : ["phone", "sms"]);
+  const preferred = pref ?? "phone";
+  return (
+    <fieldset className="rounded-xl border border-gray-200 bg-white p-3">
+      <input type="hidden" name="contact_form" value="1" />
+      <legend className="px-1 text-sm font-medium text-gray-700">顾客怎么联系你 *</legend>
+      <p className="text-xs text-gray-500">可以多选。电话和短信都用上面的号码；加微信要先填微信号。</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {CONTACT_METHODS.map((m) => (
+          <label key={m.id} className="flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-sm">
+            <input type="checkbox" name="contact_methods" value={m.id} defaultChecked={checked.includes(m.id)} />
+            {m.zh}
+          </label>
+        ))}
+      </div>
+      <FieldError name="contact_methods" />
+      <p className="mt-3 text-sm font-medium text-gray-700">最希望顾客用哪种？</p>
+      <p className="text-xs text-gray-500">名片上这个按钮排第一，并标“偏好…联系”。</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {CONTACT_METHODS.map((m) => (
+          <label key={m.id} className="flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-sm">
+            <input type="radio" name="contact_pref" value={m.id} defaultChecked={preferred === m.id} />
+            {m.zh}
+          </label>
+        ))}
+      </div>
+      <FieldError name="contact_pref" />
+    </fieldset>
   );
 }

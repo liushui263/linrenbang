@@ -151,7 +151,14 @@ export default function ProviderCard({ provider: p, isTodayPick, isNewToday, exp
           {compactBody}
         </Link>
         <div className="mt-2.5">
-          <ContactButtons providerId={p.id} hasWechat={p.has_wechat} paused={p.status === "paused"} compact />
+          <ContactButtons
+            providerId={p.id}
+            methods={p.contact_methods}
+            pref={p.contact_pref}
+            hasWechat={p.has_wechat}
+            paused={p.status === "paused"}
+            compact
+          />
         </div>
       </article>
     );
@@ -177,7 +184,13 @@ export default function ProviderCard({ provider: p, isTodayPick, isNewToday, exp
       {body}
       {/* 7. 底部双按钮 */}
       <div className="mt-3">
-        <ContactButtons providerId={p.id} hasWechat={p.has_wechat} paused={p.status === "paused"} />
+        <ContactButtons
+          providerId={p.id}
+          methods={p.contact_methods}
+          pref={p.contact_pref}
+          hasWechat={p.has_wechat}
+          paused={p.status === "paused"}
+        />
       </div>
     </article>
   );

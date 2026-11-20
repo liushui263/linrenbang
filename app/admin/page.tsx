@@ -13,6 +13,7 @@ import {
   resolveReport,
 } from "@/app/actions/admin";
 import { providerCategories, providerCategoryLabel } from "@/constants/categories";
+import { CONTACT_METHODS } from "@/constants/site";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { formatUsPhone } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -58,7 +59,7 @@ export default async function AdminPage() {
   const [providers, recs, reports, claims, foundingCount, others, asks, answers] = await Promise.all([
     admin
       .from("providers")
-      .select("id, name, category, categories, custom_service, phone, wechat_id, service_areas, tagline, description, source, price_note, created_at")
+      .select("id, name, category, categories, custom_service, phone, wechat_id, contact_methods, contact_pref, service_areas, tagline, description, source, price_note, created_at")
       .eq("status", "pending")
       .order("created_at"),
     admin
@@ -133,6 +134,9 @@ export default async function AdminPage() {
               </div>
               <div className="text-gray-600">
                 {formatUsPhone(p.phone)} {p.wechat_id && `· 微信 ${p.wechat_id}`} · {p.service_areas.join(", ")}
+                <br />
+                联系：{CONTACT_METHODS.filter((m) => p.contact_methods?.includes(m.id)).map((m) => m.zh).join(" / ")}
+                {p.contact_pref && ` · ${CONTACT_METHODS.find((m) => m.id === p.contact_pref)?.pref ?? ""}`}
               </div>
               {p.tagline && <div className="text-gray-600">{p.tagline}</div>}
               {p.description && <div className="text-gray-500">{p.description}</div>}

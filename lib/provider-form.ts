@@ -1,5 +1,6 @@
 import { CATEGORY_IDS, LANGUAGES, MAX_CATEGORIES, OTHER_CATEGORY } from "@/constants/categories";
 import { CITIES } from "@/constants/cities";
+import { CONTACT_METHOD_IDS, type ContactMethod } from "@/constants/site";
 import { toE164 } from "@/lib/phone";
 import { selectedCategories, validateForm, type FieldErrors } from "@/lib/validate";
 
@@ -22,6 +23,8 @@ export interface ProviderInput {
   emergency_24h: boolean;
   price_note: string | null;
   description: string | null;
+  contact_methods: ContactMethod[];
+  contact_pref: ContactMethod;
 }
 
 const str = (fd: FormData, k: string, max: number) => {
@@ -41,6 +44,8 @@ export function parseProviderForm(
     "service_areas",
     ...(includePhone ? ["phone"] : []),
     "wechat_id",
+    "contact_methods",
+    "contact_pref",
     "tagline",
     "description",
   ]);
@@ -75,6 +80,20 @@ export function parseProviderForm(
   const wechat = str(fd, "wechat_id", 60);
   const description = str(fd, "description", 300);
 
+  // 联系方式：表单里有这一组就按商家选的；没有（邻居代录入）就默认电话 + 短信，有微信号再加微信
+  let contact_methods: ContactMethod[];
+  let contact_pref: ContactMethod;
+  if (fd.get("contact_form")) {
+    const picked = fd.getAll("contact_methods").map(String).filter((m) => CONTACT_METHOD_IDS.includes(m));
+    contact_methods = CONTACT_METHOD_IDS.filter((m) => picked.includes(m) && (m !== "wechat" || wechat)) as ContactMethod[];
+    if (contact_methods.length === 0) return { error: "请至少选一种顾客联系你的方式" };
+    const pref = String(fd.get("contact_pref") ?? "") as ContactMethod;
+    contact_pref = contact_methods.includes(pref) ? pref : contact_methods[0];
+  } else {
+    contact_methods = wechat ? ["phone", "sms", "wechat"] : ["phone", "sms"];
+    contact_pref = "phone";
+  }
+
   return {
     data: {
       name,
@@ -94,6 +113,8 @@ export function parseProviderForm(
       emergency_24h: fd.get("emergency_24h") === "on",
       price_note: str(fd, "price_note", 150),
       description,
+      contact_methods,
+      contact_pref,
     },
   };
 }
