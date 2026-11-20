@@ -8,6 +8,7 @@ export const FOUNDING_DAYS = 100; // 创始有效期 100 天，自审核通过�
 export const ROTATION_POOL_PER_CATEGORY = 10; // 每分类、创始有效期内、通过最早的 10 名进轮换池
 export const MAX_ROTATION_PER_LIST = 2; // 每页列表顶部最多 2 条轮换
 export const PAGE_SIZE = 20;
+export const NEW_TODAY_LIMIT = 5; // “今日邻人推荐”最前面最多放几位今天新被推荐的
 
 export const ROTATION_EPOCH = "2026-01-01"; // dayIndex 起算日
 export const ROTATION_TIME_ZONE = "America/Chicago";

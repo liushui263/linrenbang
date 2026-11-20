@@ -11,6 +11,8 @@ interface Props {
   pref?: ContactMethod;
   hasWechat: boolean;
   paused: boolean;
+  /** 列表里的紧凑版：按钮矮一点 */
+  compact?: boolean;
 }
 
 type Contact = { phone: string | null; wechat_id: string | null };
@@ -19,7 +21,8 @@ type Contact = { phone: string | null; wechat_id: string | null };
  * 13.6：电话和微信不在 HTML 里，点按钮才从接口取。
  * v3.4：商家选的联系方式（打电话 / 发短信 / 加微信），偏好的那个排第一、实心高亮。
  */
-export default function ContactButtons({ providerId, methods = ["phone", "sms"], pref = "phone", hasWechat, paused }: Props) {
+export default function ContactButtons({ providerId, methods = ["phone", "sms"], pref = "phone", hasWechat, paused, compact }: Props) {
+  const py = compact ? "py-2" : "py-3";
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState<ContactMethod | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -102,7 +105,7 @@ export default function ContactButtons({ providerId, methods = ["phone", "sms"],
     return (
       <button
         disabled
-        className="w-full rounded-xl bg-gray-200 py-3 text-sm font-medium text-gray-500"
+        className={`w-full rounded-xl bg-gray-200 ${py} text-sm font-medium text-gray-500`}
         aria-disabled="true"
       >
         近期排期已满 · 暂不接单
@@ -128,7 +131,7 @@ export default function ContactButtons({ providerId, methods = ["phone", "sms"],
               key={m.id}
               onClick={handlers[m.id]}
               disabled={loading !== null}
-              className={`flex-1 rounded-xl py-3 text-sm font-medium disabled:opacity-60 ${
+              className={`flex-1 rounded-xl ${py} text-sm font-medium disabled:opacity-60 ${
                 primary
                   ? "bg-emerald-600 text-white active:bg-emerald-700"
                   : "border border-emerald-600 text-emerald-700 active:bg-emerald-50"
