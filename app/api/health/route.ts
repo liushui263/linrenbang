@@ -33,6 +33,8 @@ export async function GET() {
     }
     const { error: colErr } = await admin.from("providers").select("custom_service").limit(1);
     checks["0002 迁移（custom_service 列）"] = colErr ? `没运行：${colErr.message}` : "ok";
+    const { error: cpErr } = await admin.from("providers").select("contact_methods, contact_pref").limit(1);
+    checks["0007 迁移（联系方式偏好）"] = cpErr ? `没运行：${cpErr.message}` : "ok";
     const { data: buckets, error: bErr } = await admin.storage.listBuckets();
     if (bErr) checks["图片存储"] = `出错：${bErr.message}`;
     else {

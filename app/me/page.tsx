@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
+import MyFavorites from "@/components/MyFavorites";
+import RecommenderImpact from "@/components/RecommenderImpact";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -11,13 +13,20 @@ export default async function MePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/me");
   const admin = createAdminClient();
-  const [{ data: provider }, { data: recs }] = await Promise.all([
+  const [{ data: provider }, { data: recs }, { data: asks }] = await Promise.all([
     admin.from("providers").select("id, name, status").eq("owner_user_id", user.id).maybeSingle(),
     admin
       .from("recommendations")
       .select("id, status, provider_id, providers(name)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
+    admin
+      .from("asks")
+      .select("id, title, status, answer_count")
+      .eq("user_id", user.id)
+      .neq("status", "hidden")
+      .order("created_at", { ascending: false })
+      .limit(20),
   ]);
 
   return (
@@ -26,6 +35,8 @@ export default async function MePage() {
         <h1 className="text-xl font-bold">我的</h1>
         <p className="text-sm text-gray-500">{user.email}</p>
       </div>
+
+      <MyFavorites userId={user.id} />
 
       <section className="rounded-2xl bg-white p-4">
         <h2 className="font-semibold">我的店</h2>
@@ -42,6 +53,34 @@ export default async function MePage() {
               认领已有的店
             </Link>
           </div>
+        )}
+      </section>
+
+      {/* 推荐有回音：自成一块 */}
+      <RecommenderImpact userId={user.id} />
+
+      <section className="rounded-2xl bg-white p-4">
+        <h2 className="font-semibold">我的求推荐</h2>
+        {asks && asks.length > 0 ? (
+          <ul className="mt-2 space-y-1 text-sm">
+            {asks.map((a) => (
+              <li key={a.id} className="flex justify-between gap-3">
+                <Link href={`/ask/${a.id}`} className="min-w-0 truncate text-emerald-700 underline">
+                  {a.title}
+                </Link>
+                <span className={`shrink-0 ${a.status === "open" && a.answer_count > 0 ? "font-medium text-orange-600" : "text-gray-400"}`}>
+                  {a.status === "closed" ? "已关闭" : a.answer_count > 0 ? `${a.answer_count} 个回答` : "等回答"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-gray-500">
+            还没问过。
+            <Link href="/ask/new" className="text-emerald-700 underline">
+              问问邻居
+            </Link>
+          </p>
         )}
       </section>
 

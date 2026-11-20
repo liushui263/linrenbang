@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import ContactButtons from "@/components/ContactButtons";
 import ProviderCard from "@/components/ProviderCard";
 import ReportButton from "@/components/ReportButton";
+import TrackView from "@/components/TrackView";
 import { providerCategoryLabel } from "@/constants/categories";
 import { getCurrentUser } from "@/lib/auth";
 import { getVisitorLocation } from "@/lib/location";
@@ -77,6 +78,7 @@ export default async function ProviderPage({ params }: Props) {
 
   return (
     <div className="space-y-5 pb-24 pt-4">
+      <TrackView providerId={p.id} />
       <ProviderCard provider={p} expanded />
 
       <section className="rounded-2xl bg-white p-4 text-sm leading-relaxed text-gray-700">
@@ -135,7 +137,13 @@ export default async function ProviderPage({ params }: Props) {
       {/* 底部悬浮栏 */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto max-w-2xl">
-          <ContactButtons providerId={p.id} hasWechat={p.has_wechat} paused={p.status === "paused"} />
+          <ContactButtons
+          providerId={p.id}
+          methods={p.contact_methods}
+          pref={p.contact_pref}
+          hasWechat={p.has_wechat}
+          paused={p.status === "paused"}
+        />
         </div>
       </div>
     </div>

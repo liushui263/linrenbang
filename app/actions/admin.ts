@@ -60,8 +60,14 @@ export async function resolveReport(fd: FormData) {
   const hide = fd.get("hide") === "1";
   const { data: r } = await admin.from("reports").select("target_type, target_id").eq("id", id).single();
   if (r && hide) {
-    const table = r.target_type === "provider" ? "providers" : "recommendations";
-    await admin.from(table).update({ status: "hidden" }).eq("id", r.target_id);
+    const table = {
+      provider: "providers",
+      recommendation: "recommendations",
+      ask: "asks",
+      ask_answer: "ask_answers",
+    }[r.target_type as string];
+    if (table) await admin.from(table).update({ status: "hidden" }).eq("id", r.target_id);
+    if (r.target_type === "ask" || r.target_type === "ask_answer") revalidatePath("/ask");
   }
   await admin.from("reports").update({ status: "resolved" }).eq("id", id);
   done(r?.target_type === "provider" ? r.target_id : undefined);
@@ -88,5 +94,24 @@ export async function approveClaim(fd: FormData) {
 export async function rejectClaim(fd: FormData) {
   const admin = await requireAdmin();
   await admin.from("claim_requests").update({ status: "rejected" }).eq("id", idOf(fd));
+  done();
+}
+
+/** 求推荐是先发后管：站长看到不对的（广告、留联系方式、自问自答）直接隐藏 */
+export async function hideAsk(fd: FormData) {
+  const admin = await requireAdmin();
+  const id = idOf(fd);
+  await admin.from("asks").update({ status: "hidden" }).eq("id", id);
+  revalidatePath("/ask");
+  revalidatePath(`/ask/${id}`);
+  done();
+}
+
+export async function hideAskAnswer(fd: FormData) {
+  const admin = await requireAdmin();
+  const id = idOf(fd);
+  const { data } = await admin.from("ask_answers").update({ status: "hidden" }).eq("id", id).select("ask_id").single();
+  if (data) revalidatePath(`/ask/${data.ask_id}`);
+  revalidatePath("/ask");
   done();
 }

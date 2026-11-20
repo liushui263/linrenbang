@@ -9,6 +9,7 @@ export default function Footer({ hasShop = false }: { hasShop?: boolean }) {
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold text-gray-900">
           {hasShop ? <Link href="/merchant">管理我的名片</Link> : <Link href="/merchant/register">商家免费注册</Link>}
           <Link href="/recommend">推荐一位师傅</Link>
+          <Link href="/ask">邻居求推荐</Link>
           {!hasShop && <Link href="/merchant/claim">认领我的店</Link>}
         </div>
         <p>{DISCLAIMER_ZH}</p>
