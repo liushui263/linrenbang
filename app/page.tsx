@@ -11,7 +11,6 @@ import {
   CATEGORIES,
   CATEGORY_GROUPS,
   CATEGORY_IDS,
-  HOME_GROUP_COUNT,
   type CategoryGroup,
   categoryName,
   findGroup,
@@ -54,34 +53,31 @@ function GroupTile({ g, active, link }: { g: CategoryGroup; active: boolean; lin
     <Link
       href={link}
       aria-current={active ? "page" : undefined}
-      className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border-[1.5px] px-1 py-2.5 text-center shadow-[0_3px_10px_rgba(30,70,120,0.07)] transition duration-200 hover:-translate-y-0.5 hover:border-emerald-300 active:translate-y-0 sm:py-3 ${
+      className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl border-[1.5px] px-0.5 py-2 text-center shadow-[0_3px_10px_rgba(30,70,120,0.07)] transition duration-200 hover:-translate-y-0.5 hover:border-emerald-300 active:translate-y-0 sm:gap-1 sm:py-2.5 ${
         active ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/20" : "border-slate-200 bg-white"
       }`}
     >
       <span
         aria-hidden="true"
-        className="flex h-11 w-11 items-center justify-center rounded-full text-[24px] leading-none sm:h-12 sm:w-12 sm:text-[26px]"
+        className="flex h-9 w-9 items-center justify-center rounded-full text-[20px] leading-none sm:h-11 sm:w-11 sm:text-[24px]"
         style={{ backgroundColor: g.tint }}
       >
         {g.icon}
       </span>
-      <span className={`text-[13px] font-bold leading-snug sm:text-sm ${active ? "text-emerald-800" : "text-slate-800"}`}>{g.zh}</span>
-      <span className="text-[10px] leading-tight text-slate-400 [overflow-wrap:anywhere] sm:text-[11px]">{g.hint}</span>
+      <span className={`text-[12.5px] font-bold leading-snug sm:text-sm ${active ? "text-emerald-800" : "text-slate-800"}`}>{g.zh}</span>
+      <span className="whitespace-nowrap text-[10px] leading-tight text-slate-400 max-[359px]:text-[9px] sm:text-[11px]">{g.hint}</span>
     </Link>
   );
 }
 
-/** 分类区：6 个大类 + “查看全部服务分类”（另外 2 个大类）；选中大类后下面出细分类。链接都带上当前片区 */
+/** 分类区：8 个大类分两行全部列出；选中大类后下面出细分类。链接都带上当前片区 */
 function CategoryNav({ category, group, q, area }: { category?: string; group?: CategoryGroup; q?: string; area?: string }) {
-  const shown = CATEGORY_GROUPS.slice(0, HOME_GROUP_COUNT);
-  const more = CATEGORY_GROUPS.slice(HOME_GROUP_COUNT);
-  const activeInMore = !!group && more.some((g) => g.id === group.id);
   const chip = (active: boolean) =>
     `rounded-full px-3 py-1 text-xs sm:text-sm ${active ? "bg-emerald-600 text-white" : "bg-white text-slate-700 ring-1 ring-slate-200"}`;
   return (
     <nav aria-label="分类" className="space-y-2">
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {shown.map((g) => (
+      <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
+        {CATEGORY_GROUPS.map((g) => (
           <GroupTile key={g.id} g={g} active={group?.id === g.id} link={groupHref(g, group, q, area)} />
         ))}
       </div>
@@ -107,20 +103,6 @@ function CategoryNav({ category, group, q, area }: { category?: string; group?: 
           })}
         </div>
       )}
-
-      <details open={activeInMore} className="group rounded-xl border border-slate-200 bg-white">
-        <summary className="cursor-pointer list-none py-2.5 text-center text-sm font-medium text-emerald-700 [&::-webkit-details-marker]:hidden">
-          查看全部服务分类
-          <span className="ml-1 inline-block transition group-open:rotate-180">▾</span>
-        </summary>
-        <div className="space-y-3 border-t border-slate-100 p-2.5">
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {more.map((g) => (
-              <GroupTile key={g.id} g={g} active={group?.id === g.id} link={groupHref(g, group, q, area)} />
-            ))}
-          </div>
-        </div>
-      </details>
     </nav>
   );
 }

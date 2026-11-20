@@ -32,7 +32,7 @@ export const CATEGORY_IDS = CATEGORIES.map((c) => c.id);
 
 /**
  * 首页的 8 个大类：只是展示用的分组，数据库里商家仍然存 15 个细分类之一。
- * 前 HOME_GROUP_COUNT 个直接显示在首页，其余放在“查看全部分类”里。
+ * 首页两行全部列出（每行 4 个）。
  * 只含 1 个细分类的大类，点了直接进那个分类，不再多选一次。
  */
 export interface CategoryGroup {
@@ -40,23 +40,21 @@ export interface CategoryGroup {
   zh: string;
   icon: string;
   tint: string;
-  /** 大类卡片下面的小字，说明包含哪些细分类 */
+  /** 大类卡片下面的小字（约 6 个字），说明包含哪些细分类 */
   hint: string;
   categories: string[];
 }
 
 export const CATEGORY_GROUPS: CategoryGroup[] = [
-  { id: "home_repair", zh: "房屋维修", icon: "❄️", tint: "#e0f2fe", hint: "空调·水暖·电路·屋顶", categories: ["hvac", "plumbing", "electrical", "roof"] },
-  { id: "renovation", zh: "家居装修", icon: "🔧", tint: "#e0e7ff", hint: "装修·家电·车库门·杂修", categories: ["handyman", "appliance"] },
-  { id: "yard_pest", zh: "庭院虫害", icon: "🌿", tint: "#dcfce7", hint: "草坪·围栏·园艺·除虫", categories: ["lawn_fence", "pest"] },
-  { id: "moving", zh: "搬家交通", icon: "🚚", tint: "#fef3c7", hint: "搬家·机场接送·运输", categories: ["moving_ride"] },
-  { id: "real_estate", zh: "房产服务", icon: "🏠", tint: "#ede9fe", hint: "经纪·贷款·过户", categories: ["realtor", "mortgage_title"] },
-  { id: "food", zh: "餐饮美食", icon: "🍜", tint: "#ffedd5", hint: "中餐·外卖·餐饮推荐", categories: ["food"] },
-  { id: "finance", zh: "财税保险", icon: "🧾", tint: "#ccfbf1", hint: "税务·财务·保险", categories: ["tax", "finance_insurance"] },
-  { id: "other", zh: "其他服务", icon: "⭐", tint: "#fef3c7", hint: "其他生活及专业服务", categories: ["other"] },
+  { id: "home_repair", zh: "房屋维修", icon: "❄️", tint: "#e0f2fe", hint: "空调 水电 屋顶", categories: ["hvac", "plumbing", "electrical", "roof"] },
+  { id: "renovation", zh: "家居装修", icon: "🔧", tint: "#e0e7ff", hint: "装修 家电 车库", categories: ["handyman", "appliance"] },
+  { id: "yard_pest", zh: "庭院虫害", icon: "🌿", tint: "#dcfce7", hint: "草坪 围栏 除虫", categories: ["lawn_fence", "pest"] },
+  { id: "moving", zh: "搬家交通", icon: "🚚", tint: "#fef3c7", hint: "搬家 接送 运输", categories: ["moving_ride"] },
+  { id: "real_estate", zh: "房产服务", icon: "🏠", tint: "#ede9fe", hint: "经纪 贷款 过户", categories: ["realtor", "mortgage_title"] },
+  { id: "food", zh: "餐饮美食", icon: "🍜", tint: "#ffedd5", hint: "餐饮 花卉 外卖", categories: ["food"] },
+  { id: "finance", zh: "财税保险", icon: "🧾", tint: "#ccfbf1", hint: "税务 财务 保险", categories: ["tax", "finance_insurance"] },
+  { id: "other", zh: "其他服务", icon: "⭐", tint: "#fef3c7", hint: "其他专业服务", categories: ["other"] },
 ];
-
-export const HOME_GROUP_COUNT = 6;
 
 export const CATEGORY_GROUP_IDS = CATEGORY_GROUPS.map((g) => g.id);
 
