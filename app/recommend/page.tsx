@@ -49,7 +49,7 @@ export default async function RecommendPage({ searchParams }: { searchParams: Pr
 
   const loginGate = (
     <div className="rounded-2xl bg-white p-4 text-sm">
-      写推荐需要先登录（用 Google 账号，一分钟）。
+      写推荐需要先登录（Google 或邮箱验证码，一分钟）。
       <Link href={`/login?next=${encodeURIComponent(here)}`} className="ml-1 font-medium text-emerald-700 underline">
         去登录
       </Link>

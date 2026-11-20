@@ -51,7 +51,7 @@ export function dbErrorMessage(
     case "23505":
       return "这条信息已经存在了（电话或账号重复）";
     case "23503":
-      return "账号信息不完整，请退出登录后重新用 Google 登录一次再试";
+      return "账号信息不完整，请退出登录后重新登录一次再试";
     case "23514":
       return "有一项内容格式不对，请检查后再提交";
     case "22001":

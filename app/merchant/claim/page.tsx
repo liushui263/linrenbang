@@ -22,7 +22,7 @@ export default async function ClaimPage({ searchParams }: { searchParams: Promis
       </p>
       {!user ? (
         <Link href={`/login?next=${encodeURIComponent(self)}`} className="block rounded-xl bg-emerald-600 py-3 text-center font-medium text-white">
-          Google 登录后继续
+          登录后继续
         </Link>
       ) : (
         <ActionForm action={requestClaim} hideOnSuccess>

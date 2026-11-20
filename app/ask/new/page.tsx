@@ -40,15 +40,14 @@ export default async function NewAskPage({ searchParams }: { searchParams: Promi
               <p className="mt-1 font-semibold text-gray-900">{title}</p>
             </div>
           )}
-          <p className="text-sm text-gray-600">发求推荐要先用 Google 登录（一分钟）。登录是为了防止刷屏，看帖不用登录。</p>
+          <p className="text-sm text-gray-600">发求推荐要先登录（Google 或邮箱验证码，一分钟）。登录是为了防止刷屏，看帖不用登录。</p>
           <Link
             href={`/login?next=${encodeURIComponent(here)}`}
             className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-3 text-base font-semibold text-gray-800 shadow-sm"
           >
-            <span className="text-lg font-bold text-blue-600">G</span>
-            用 Google 登录再发布
+            登录再发布
           </Link>
-          <p className="text-center text-xs text-gray-400">手机短信、微信登录暂不支持。</p>
+          <p className="text-center text-xs text-gray-400">没有 Google 账号也行，用邮箱收验证码就能登录。</p>
         </section>
       ) : (
         <ActionForm action={createAsk}>

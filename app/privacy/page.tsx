@@ -36,6 +36,14 @@ export default function PrivacyPage() {
           ),
         },
         {
+          title: "用邮箱验证码登录时",
+          body: (
+            <p>
+              你用邮箱登录时，我们会把一次性验证码发到你填的邮箱。我们只保存邮箱地址（显示名称默认取邮箱 @ 前面的部分），用来识别你的账号。邮箱不会公开显示，也不会用来发广告。
+            </p>
+          ),
+        },
+        {
           title: "你主动提供的信息",
           body: (
             <Ul
@@ -90,6 +98,7 @@ export default function PrivacyPage() {
                   "Supabase：数据库、登录和图片存储。",
                   "Vercel：网站托管。",
                   "Google：提供“用 Google 登录”。",
+                  "Resend 等邮件服务：替我们发送邮箱登录验证码。",
                 ]}
               />
               <p>除非法律要求（如法院传票），我们不会向其他任何人提供你的信息。</p>
@@ -137,6 +146,14 @@ export default function PrivacyPage() {
                 Information received from Google is used only for sign-in and account management. It is never sold, transferred to others, or used for advertising. Our use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.
               </p>
             </>
+          ),
+        },
+        {
+          title: "Signing in with an email code",
+          body: (
+            <p>
+              When you sign in with email, we send a one-time code to the address you enter. We store only that email address (your display name defaults to the part before the @) to identify your account. Your email is never shown publicly or used for marketing.
+            </p>
           ),
         },
         {
@@ -189,7 +206,7 @@ export default function PrivacyPage() {
           body: (
             <>
               <p>We do not sell or rent personal information. Only these service providers process data on our behalf:</p>
-              <Ul items={["Supabase: database, authentication and image storage.", "Vercel: website hosting.", "Google: “Sign in with Google”."]} />
+              <Ul items={["Supabase: database, authentication and image storage.", "Vercel: website hosting.", "Google: “Sign in with Google”.", "Email delivery provider (e.g. Resend): sends email sign-in codes."]} />
               <p>We will not disclose your information to anyone else unless required by law (for example, a subpoena).</p>
             </>
           ),

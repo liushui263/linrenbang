@@ -230,7 +230,7 @@ export default async function AskPage({ params, searchParams }: Props) {
             <AnswerForm askId={a.id} areas={loc.city.areas} area={loc.area} />
           ) : (
             <div className="text-sm text-gray-600">
-              推荐需要先用 Google 登录（一分钟），防止商家自己刷。
+              推荐需要先登录（Google 或邮箱验证码，一分钟），防止商家自己刷。
               <Link href={`/login?next=${encodeURIComponent(`${here}#answer`)}`} className="ml-1 font-medium text-emerald-700 underline">
                 去登录
               </Link>
