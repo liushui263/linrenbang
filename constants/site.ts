@@ -8,7 +8,11 @@ export const FOUNDING_DAYS = 100; // 创始有效期 100 天，自审核通过�
 export const ROTATION_POOL_PER_CATEGORY = 10; // 每分类、创始有效期内、通过最早的 10 名进轮换池
 export const MAX_ROTATION_PER_LIST = 2; // 轮换函数的默认条数（测试和旧调用）
 export const TODAY_PICKS = 6; // “今日邻人推荐”公平轮换取几家；同时也是一屏最多显示几张，多了就每 10 秒滚动一张
+/** 记住访客片区的 cookie（片区下拉在浏览器里直接写，服务端读） */
+export const AREA_COOKIE = "lrb_area";
 export const PAGE_SIZE = 20;
+export const RANKED_PREVIEW = 10; // 首页“按推荐数排序”先显示前几家，点“更多商家”展开全部
+export const RANKED_MAX = 500; // 展开后最多列多少家（一行一家，不翻页）
 export const NEW_PICKS_LIMIT = 6; // “今日邻人推荐”最前面最多放几位新加入 / 新被推荐的
 export const NEW_PICKS_DAYS = 7; // 多少天内通过审核的商家、通过的推荐算“新”
 export const TODAY_SCROLL_MS = 10_000; // 多于一屏时，每隔多久滚动一张

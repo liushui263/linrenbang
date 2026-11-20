@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { saveArea } from "@/app/actions/location";
+import { AREA_COOKIE } from "@/constants/site";
 
 /**
- * 片区筛选：选了马上显示新值（不等服务器），同时写进 URL（?area=，能分享、刷新不丢）
- * 和 cookie（点别的分类/回首页还记得）。
+ * 片区筛选：选了马上换 URL（?area=，能分享、刷新不丢），页面立刻按新片区重新渲染；
+ * 同时在浏览器里写 cookie（点别的分类/回首页还记得）。
+ * 不走 server action：action 里的 revalidatePath 和 router.replace 抢着刷新，之前会出现 URL 变了但内容没变。
  */
 export default function AreaSelect({ areas, value }: { areas: string[]; value: string | null }) {
   const router = useRouter();
@@ -18,16 +19,17 @@ export default function AreaSelect({ areas, value }: { areas: string[]; value: s
   useEffect(() => setSelected(value ?? ""), [value]);
 
   function choose(area: string) {
+    if (area && !areas.includes(area)) return;
     setSelected(area);
+    document.cookie = area
+      ? `${AREA_COOKIE}=${encodeURIComponent(area)}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
+      : `${AREA_COOKIE}=; path=/; max-age=0; samesite=lax`;
     const next = new URLSearchParams(params.toString());
     if (area) next.set("area", area);
     else next.delete("area");
     next.delete("page"); // 换片区后结果变了，回到第 1 页
     const qs = next.toString();
-    start(async () => {
-      await saveArea(area || null);
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    });
+    start(() => router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false }));
   }
 
   return (

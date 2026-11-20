@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { cityForZip, DEFAULT_CITY_ID, getCity, isValidZip } from "@/constants/cities";
+import { cityForZip, DEFAULT_CITY_ID, isValidZip } from "@/constants/cities";
 import { getCurrentUser } from "@/lib/auth";
 import { AREA_COOKIE, ZIP_COOKIE } from "@/lib/location";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -32,18 +32,6 @@ export async function saveZip(zip: string | null): Promise<{ ok: boolean; live: 
   }
   revalidatePath("/", "layout");
   return { ok: true, live: !!city };
-}
-
-export async function saveArea(area: string | null) {
-  const store = await cookies();
-  const zip = store.get(ZIP_COOKIE)?.value;
-  const city = (zip && cityForZip(zip)) || getCity(null);
-  if (area && city.areas.includes(area)) {
-    store.set(AREA_COOKIE, area, { maxAge: YEAR, path: "/", sameSite: "lax" });
-  } else {
-    store.delete(AREA_COOKIE);
-  }
-  revalidatePath("/", "layout");
 }
 
 /** 没开通城市的访客点“附近已开通”的片区：Zip 换成该片区的代表 Zip，并选中片区 */
