@@ -38,3 +38,8 @@ export const SMS_GREETING = "你好，我在邻人帮看到你的名片，想咨
 
 /** 首页搜索框下面的热搜词（点了直接搜） */
 export const HOT_SEARCHES = ["换热水器", "空调", "搬家", "报税"];
+
+/** 隐私政策 / 服务条款里公开的联系邮箱（也是 Google OAuth 品牌页要求的联系方式） */
+export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "support@linrenbang.com";
+/** 隐私政策 / 服务条款生效日期 */
+export const LEGAL_EFFECTIVE_DATE = "2026-11-20";

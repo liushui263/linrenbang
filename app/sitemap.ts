@@ -11,6 +11,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: SITE_URL },
     { url: `${SITE_URL}/merchant/register` },
     { url: `${SITE_URL}/ask` },
+    { url: `${SITE_URL}/privacy` },
+    { url: `${SITE_URL}/terms` },
     ...SEASONAL_REMINDERS.filter((r) => r.enabled).map((r) => ({ url: `${SITE_URL}/season/${r.id}` })),
   ];
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return base;

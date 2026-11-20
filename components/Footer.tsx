@@ -14,8 +14,16 @@ export default function Footer({ hasShop = false }: { hasShop?: boolean }) {
         </div>
         <p>{DISCLAIMER_ZH}</p>
         <p>{DISCLAIMER_EN}</p>
-        <p>
-          © {new Date().getFullYear()} {SITE_NAME} {SITE_NAME_EN}
+        <p className="flex flex-wrap gap-x-3 gap-y-1">
+          <span>
+            © {new Date().getFullYear()} {SITE_NAME} {SITE_NAME_EN}
+          </span>
+          <Link href="/privacy" className="underline">
+            隐私政策 Privacy
+          </Link>
+          <Link href="/terms" className="underline">
+            服务条款 Terms
+          </Link>
         </p>
       </div>
     </footer>
