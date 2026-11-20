@@ -1,7 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import { CATEGORY_IDS } from "@/constants/categories";
-import { NEW_PICKS_DAYS, NEW_PICKS_LIMIT, PAGE_SIZE, ROTATION_POOL_PER_CATEGORY, TODAY_PICKS } from "@/constants/site";
+import { NEW_PICKS_DAYS, NEW_PICKS_LIMIT, PAGE_SIZE, RANKED_MAX, ROTATION_POOL_PER_CATEGORY, TODAY_PICKS } from "@/constants/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { chicagoDateString, chicagoDayBounds, dayIndexFor, pickDailyRotation, pickHomeRotation } from "@/lib/rotation";
@@ -214,6 +214,33 @@ export async function listProviders(f: ListFilters, excludeIds: string[] = []) {
     page,
     pageCount: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)),
   };
+}
+
+/** 首页“全部 · 按推荐数排序”：同样的分类/片区筛选，不排除今日推荐，一次取全（一行一家，前端折叠） */
+export async function listRanked(f: Omit<ListFilters, "q" | "page">): Promise<RankedProvider[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("providers")
+    .select("id, name, category, categories, recommend_count, status")
+    .eq("city_id", f.cityId)
+    .in("status", ["active", "paused"]);
+  if (f.category) query = query.contains("categories", [f.category]);
+  else if (f.categories?.length) query = query.overlaps("categories", f.categories);
+  if (f.area) query = query.contains("service_areas", [f.area]);
+  const { data } = await query
+    .order("recommend_count", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(RANKED_MAX);
+  return (data ?? []) as RankedProvider[];
+}
+
+export interface RankedProvider {
+  id: string;
+  name: string;
+  category: string;
+  categories: string[] | null;
+  recommend_count: number;
+  status: string;
 }
 
 export async function getPublicProvider(id: string): Promise<PublicProvider | null> {

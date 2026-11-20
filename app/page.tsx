@@ -2,6 +2,7 @@ import Link from "next/link";
 import AreaSelect from "@/components/AreaSelect";
 import { AskRow } from "@/components/AskCard";
 import ProviderCard from "@/components/ProviderCard";
+import RankedList from "@/components/RankedList";
 import SeasonalCard from "@/components/SeasonalCard";
 import TodayPicks from "@/components/TodayPicks";
 import UnsupportedCityNotice from "@/components/UnsupportedCityNotice";
@@ -21,7 +22,7 @@ import { HOME_ASK_COUNT, titleFromSearch } from "@/lib/ask";
 import { getLatestAsks, similarAsks } from "@/lib/asks";
 import { getVisitorLocation } from "@/lib/location";
 import { getCurrentUser } from "@/lib/auth";
-import { getGroupRotation, getMyProvider, getNewPicks, getSeasonalPicks, getTodayRotation, listProviders } from "@/lib/providers";
+import { getGroupRotation, getMyProvider, getNewPicks, getSeasonalPicks, getTodayRotation, listProviders, listRanked } from "@/lib/providers";
 import { currentReminders } from "@/lib/seasonal";
 
 export const dynamic = "force-dynamic";
@@ -43,9 +44,9 @@ function href(params: Record<string, string | undefined>) {
 }
 
 /** 点大类去哪：只有 1 个细分类的直接进细分类，再点一次取消 */
-function groupHref(g: CategoryGroup, activeGroup: CategoryGroup | undefined, q: string | undefined) {
-  if (activeGroup?.id === g.id) return href({ q });
-  return g.categories.length === 1 ? href({ category: g.categories[0], q }) : href({ group: g.id, q });
+function groupHref(g: CategoryGroup, activeGroup: CategoryGroup | undefined, q: string | undefined, area: string | undefined) {
+  if (activeGroup?.id === g.id) return href({ q, area });
+  return g.categories.length === 1 ? href({ category: g.categories[0], q, area }) : href({ group: g.id, q, area });
 }
 
 function GroupTile({ g, active, link }: { g: CategoryGroup; active: boolean; link: string }) {
@@ -70,8 +71,8 @@ function GroupTile({ g, active, link }: { g: CategoryGroup; active: boolean; lin
   );
 }
 
-/** 分类区：6 个大类 + “查看全部服务分类”（另外 2 个大类）；选中大类后下面出细分类 */
-function CategoryNav({ category, group, q }: { category?: string; group?: CategoryGroup; q?: string }) {
+/** 分类区：6 个大类 + “查看全部服务分类”（另外 2 个大类）；选中大类后下面出细分类。链接都带上当前片区 */
+function CategoryNav({ category, group, q, area }: { category?: string; group?: CategoryGroup; q?: string; area?: string }) {
   const shown = CATEGORY_GROUPS.slice(0, HOME_GROUP_COUNT);
   const more = CATEGORY_GROUPS.slice(HOME_GROUP_COUNT);
   const activeInMore = !!group && more.some((g) => g.id === group.id);
@@ -81,13 +82,13 @@ function CategoryNav({ category, group, q }: { category?: string; group?: Catego
     <nav aria-label="分类" className="space-y-2">
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {shown.map((g) => (
-          <GroupTile key={g.id} g={g} active={group?.id === g.id} link={groupHref(g, group, q)} />
+          <GroupTile key={g.id} g={g} active={group?.id === g.id} link={groupHref(g, group, q, area)} />
         ))}
       </div>
 
       {group && group.categories.length > 1 && (
         <div className="flex flex-wrap gap-1.5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-2.5">
-          <Link href={href({ group: group.id, q })} className={chip(!category)} aria-current={!category ? "page" : undefined}>
+          <Link href={href({ group: group.id, q, area })} className={chip(!category)} aria-current={!category ? "page" : undefined}>
             全部{group.zh}
           </Link>
           {group.categories.map((id) => {
@@ -96,7 +97,7 @@ function CategoryNav({ category, group, q }: { category?: string; group?: Catego
             return (
               <Link
                 key={id}
-                href={active ? href({ group: group.id, q }) : href({ category: id, q })}
+                href={active ? href({ group: group.id, q, area }) : href({ category: id, q, area })}
                 className={chip(active)}
                 aria-current={active ? "page" : undefined}
               >
@@ -115,7 +116,7 @@ function CategoryNav({ category, group, q }: { category?: string; group?: Catego
         <div className="space-y-3 border-t border-slate-100 p-2.5">
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {more.map((g) => (
-              <GroupTile key={g.id} g={g} active={group?.id === g.id} link={groupHref(g, group, q)} />
+              <GroupTile key={g.id} g={g} active={group?.id === g.id} link={groupHref(g, group, q, area)} />
             ))}
           </div>
         </div>
@@ -135,7 +136,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   if (!category && group?.categories.length === 1) category = group.categories[0];
   const groupParam = !category && group ? group.id : undefined;
   const q = sp.q?.trim() || undefined;
-  const page = Math.max(1, Number(sp.page) || 1);
+  // 当前片区（URL 或 cookie 里的），页面上所有站内链接都带上 ?area=，点分类/翻页/搜索不丢片区
+  const area = loc.area ?? undefined;
+  // 只有搜索结果分页；首页和分类页的列表是一次列全再折叠
+  const page = q ? Math.max(1, Number(sp.page) || 1) : 1;
 
   // 搜索页可以多选大类（?groups=a,b）；从首页带过来的 group / 单分类大类也算进去。
   // 选的是多细分类大类里的某一个细分类（如空调暖气）时，单独作为一个已选项。
@@ -152,8 +156,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     q && fineCategory && !searchGroups.some((g) => g.categories.includes(fineCategory)) ? fineCategory : undefined;
   const searchCats = [...searchGroups.flatMap((g) => g.categories), ...(searchCategory ? [searchCategory] : [])];
   const searchHref = (groups: CategoryGroup[], cat?: string, pageNo?: number) =>
-    href({ q, groups: groups.map((g) => g.id).join(",") || undefined, category: cat, page: pageNo ? String(pageNo) : undefined });
-  const pageHref = (n: number) => (q ? searchHref(searchGroups, searchCategory, n) : href({ category, group: groupParam, page: String(n) }));
+    href({ q, groups: groups.map((g) => g.id).join(",") || undefined, category: cat, area, page: pageNo ? String(pageNo) : undefined });
+  const pageHref = (n: number) => searchHref(searchGroups, searchCategory, n);
 
   // 搜索时不显示轮换；轮换在所有页都从列表里排除，保证翻页不重复
   const rotation = q
@@ -170,12 +174,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     ...newPicks.map((n) => ({ p: n.provider, newKind: n.kind })),
     ...rotation.filter((p) => !newIds.has(p.id)).map((p) => ({ p, newKind: undefined })),
   ];
-  const list = await listProviders(
-    q
-      ? { cityId: loc.city.id, categories: searchCats.length ? searchCats : undefined, area: loc.area ?? undefined, q, page }
-      : { cityId: loc.city.id, category, categories: groupParam ? group?.categories : undefined, area: loc.area ?? undefined, page },
-    todayCards.map(({ p }) => p.id),
-  );
+  // 搜索：分页的名片列表；不搜索：下面“按推荐数排序”一行一家列出全部（包括今日推荐里的）
+  const list = q
+    ? await listProviders({ cityId: loc.city.id, categories: searchCats.length ? searchCats : undefined, area, q, page })
+    : { providers: [], total: 0, page: 1, pageCount: 1 };
+  const ranked = q
+    ? []
+    : await listRanked({ cityId: loc.city.id, category, categories: groupParam ? group?.categories : undefined, area });
   const showRotation = todayCards.length > 0 && page === 1;
   // 首页（不搜索、不选分类、第一页）显示“邻居在求推荐”；搜不到时找类似的提问
   const showAsks = !q && !category && !group && page === 1;
@@ -302,6 +307,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </p>
         </div>
         <form action="/" className="relative mt-4 flex gap-2">
+          {area && <input type="hidden" name="area" value={area} />}
           {q ? (
             <>
               {searchGroups.length > 0 && <input type="hidden" name="groups" value={searchGroups.map((g) => g.id).join(",")} />}
@@ -325,7 +331,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <AreaSelect areas={loc.city.areas} value={loc.area} />
           {q ? null : scopeName ? (
             <Link
-              href="/"
+              href={href({ area })}
               className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-xs text-white ring-1 ring-white/40"
               aria-label={`取消分类：${scopeName}`}
             >
@@ -337,7 +343,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               {HOT_SEARCHES.map((t, i) => (
                 <span key={t}>
                   {i > 0 && " · "}
-                  <Link href={href({ q: t })} className="underline underline-offset-2">
+                  <Link href={href({ q: t, area })} className="underline underline-offset-2">
                     {t}
                   </Link>
                 </span>
@@ -357,7 +363,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   <p className="font-bold text-gray-900">
                     找到 <span className="text-emerald-700">{list.total}</span> 家 · “{q}”
                   </p>
-                  <Link href="/" className="shrink-0 text-xs text-emerald-700 underline">
+                  <Link href={href({ area })} className="shrink-0 text-xs text-emerald-700 underline">
                     清除搜索
                   </Link>
                 </div>
@@ -500,18 +506,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
           <section>
             <h2 className="mb-2 font-bold text-gray-900">热门服务</h2>
-            <CategoryNav category={category} group={group} />
+            <CategoryNav category={category} group={group} area={area} />
           </section>
 
           <section>
-            {/* 上面“今日推荐”里的商家不在这里重复出现，所以有今日推荐时叫“更多”，不叫“全部” */}
             <h2 className="mb-2 font-bold text-gray-900">
-              {where} · {showRotation ? `更多${scopeName ?? "商家"}` : (scopeName ?? "全部")}
-              <span className="ml-2 text-sm font-normal text-gray-400">
-                按邻居推荐数排序{showRotation ? "，今日推荐的不重复列出" : ""}
-              </span>
+              {where} · {scopeName ?? "全部商家"}
+              <span className="ml-2 text-sm font-normal text-gray-400">按邻居推荐数排序</span>
             </h2>
-            {list.providers.length === 0 && !showRotation ? (
+            {ranked.length === 0 ? (
               <div className="rounded-2xl bg-white p-6 text-center text-sm text-gray-600">
                 <p>
                   这里还没有人推荐{label}，
@@ -529,21 +532,18 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   。
                 </p>
               </div>
-            ) : list.providers.length === 0 ? (
-              <p className="rounded-2xl bg-white p-4 text-center text-sm text-gray-500">
-                {where}暂时只有上面这几家{scopeName ? `${scopeName}` : ""}。用过别家靠谱的？
-                <Link href="/recommend" className="text-emerald-700 underline">
-                  推荐一个
-                </Link>
-              </p>
             ) : (
-              <div className="space-y-3">
-                {list.providers.map((p) => (
-                  <ProviderCard key={p.id} provider={p} />
-                ))}
-              </div>
+              <RankedList
+                key={`${area ?? ""}|${category ?? ""}|${groupParam ?? ""}`}
+                rows={ranked.map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  categories: p.categories?.length ? p.categories : [p.category],
+                  recommend_count: p.recommend_count,
+                  paused: p.status === "paused",
+                }))}
+              />
             )}
-            {pager}
           </section>
         </>
       )}

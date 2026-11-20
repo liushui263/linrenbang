@@ -3,7 +3,9 @@ import { cookies } from "next/headers";
 import { CITY_NOTICE_COOKIE, cityForZip, getCity, isValidZip, type City } from "@/constants/cities";
 
 export const ZIP_COOKIE = "lrb_zip";
-export const AREA_COOKIE = "lrb_area";
+import { AREA_COOKIE } from "@/constants/site";
+
+export { AREA_COOKIE };
 
 export interface VisitorLocation {
   zip: string | null; // 用户输入过的 Zip
