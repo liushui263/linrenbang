@@ -7,7 +7,15 @@ import { parseProviderForm, parseRecommendationForm } from "@/lib/provider-form"
 import { checkCanAnswer, insertAskAnswer } from "@/lib/ask-answer";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export type FormState = { error?: string; ok?: string; fieldErrors?: Record<string, string> } | undefined;
+export type FormState =
+  | {
+      error?: string;
+      ok?: string;
+      fieldErrors?: Record<string, string>;
+      /** 字段错误下面附带的链接，如“去认领我的店” */
+      fieldLinks?: Record<string, { href: string; label: string }>;
+    }
+  | undefined;
 
 /** 从求推荐页进来的（/recommend?ask=...）：表单里带 ask_id，提交后顺带写一条回答 */
 function askIdOf(fd: FormData): string | null {

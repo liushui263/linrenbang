@@ -1,23 +1,38 @@
 "use client";
 
+import Link from "next/link";
 import { createContext, useActionState, useCallback, useContext, useEffect, useRef, useState, useTransition } from "react";
 import type { FormState } from "@/app/actions/recommend";
 import { validateField, type FieldErrors } from "@/lib/validate";
 
 interface Ctx {
   errors: FieldErrors;
+  links: NonNullable<NonNullable<FormState>["fieldLinks"]>;
   pending: boolean;
   /** 图片组件把处理好（压缩/裁剪）的图片登记到这里，提交时替换原文件 */
   setFile: (name: string, file: Blob | null) => void;
 }
-const FormCtx = createContext<Ctx>({ errors: {}, pending: false, setFile: () => {} });
+const FormCtx = createContext<Ctx>({ errors: {}, links: {}, pending: false, setFile: () => {} });
 export const useActionForm = () => useContext(FormCtx);
 
 /** 显示某个字段的错误（放在对应输入框下面） */
 export function FieldError({ name }: { name: string }) {
-  const { errors } = useActionForm();
+  const { errors, links } = useActionForm();
   if (!errors[name]) return null;
-  return <p className="mt-1 text-sm text-red-600">{errors[name]}</p>;
+  const link = links[name];
+  return (
+    <p className="mt-1 text-sm text-red-600">
+      {errors[name]}
+      {link && (
+        <>
+          {" "}
+          <Link href={link.href} className="font-medium text-emerald-700 underline">
+            {link.label} →
+          </Link>
+        </>
+      )}
+    </p>
+  );
 }
 
 /**
@@ -39,6 +54,8 @@ export default function ActionForm({
   const [, startTransition] = useTransition();
   const [errors, setErrors] = useState<FieldErrors>({});
   const formRef = useRef<HTMLFormElement>(null);
+  // 上次提交的内容：服务端报的错（如电话已登记）在用户没改这个字段之前一直保留
+  const submitted = useRef<FormData | null>(null);
   const filesRef = useRef<Record<string, Blob | null>>({});
   const setFile = useCallback((name: string, file: Blob | null) => {
     filesRef.current[name] = file;
@@ -69,7 +86,12 @@ export default function ActionForm({
 
   function revalidate(name: string) {
     if (!name || !formRef.current) return;
-    const msg = validateField(name, new FormData(formRef.current));
+    const fd = new FormData(formRef.current);
+    let msg = validateField(name, fd);
+    const serverMsg = state?.fieldErrors?.[name];
+    if (!msg && serverMsg && submitted.current && String(submitted.current.get(name) ?? "") === String(fd.get(name) ?? "")) {
+      msg = serverMsg;
+    }
     setErrors((prev) => {
       const next = { ...prev };
       if (msg) next[name] = msg;
@@ -94,6 +116,7 @@ export default function ActionForm({
       scrollToFirst(errs);
       return;
     }
+    submitted.current = fd;
     // 手动调用，不会像 <form action> 那样在提交后清空表单
     startTransition(() => formAction(fd));
   }
@@ -102,7 +125,7 @@ export default function ActionForm({
 
   const errorCount = Object.keys(errors).length;
   return (
-    <FormCtx.Provider value={{ errors, pending: actionPending, setFile }}>
+    <FormCtx.Provider value={{ errors, links: state?.fieldLinks ?? {}, pending: actionPending, setFile }}>
       <form
         ref={formRef}
         noValidate

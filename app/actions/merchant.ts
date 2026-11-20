@@ -4,11 +4,19 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { dbErrorMessage, ensureUserRow, getCurrentUser } from "@/lib/auth";
 import { validateForm } from "@/lib/validate";
-import { toE164 } from "@/lib/phone";
+import { formatUsPhone, toE164 } from "@/lib/phone";
 import { parseProviderForm } from "@/lib/provider-form";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { removeImage, uploadImage } from "@/lib/uploads";
 import type { FormState } from "./recommend";
+
+/** 电话已被登记：提示并给出“认领我的店”链接，电话带过去不用再填 */
+function duplicatePhone(phone: string): FormState {
+  return {
+    fieldErrors: { phone: "这个电话已经登记过了。如果是邻居帮你登记的，可以直接认领。" },
+    fieldLinks: { phone: { href: `/merchant/claim?phone=${encodeURIComponent(formatUsPhone(phone))}`, label: "认领我的店" } },
+  };
+}
 
 /** 7.1 商家自助注册：Google 登录 → 填表 → pending */
 export async function registerMerchant(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -24,7 +32,7 @@ export async function registerMerchant(_prev: FormState, fd: FormData): Promise<
   // 电话重复先查一下，直接提示在电话那一栏
   const { data: dup } = await admin.from("providers").select("id").eq("phone", parsed.data.phone).maybeSingle();
   if (dup) {
-    return { fieldErrors: { phone: "这个电话已经登记过了。如果是邻居帮你登记的，请去“认领我的店”。" } };
+    return duplicatePhone(parsed.data.phone);
   }
 
   const userErr = await ensureUserRow(user);
@@ -47,7 +55,7 @@ export async function registerMerchant(_prev: FormState, fd: FormData): Promise<
   });
   if (error) {
     if (error.code === "23505") {
-      return { fieldErrors: { phone: "这个电话已经登记过了。如果是邻居帮你登记的，请去“认领我的店”。" } };
+      return duplicatePhone(parsed.data.phone);
     }
     return { error: dbErrorMessage("registerMerchant", error) };
   }
