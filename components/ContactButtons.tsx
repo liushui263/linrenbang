@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { CONTACT_METHODS, SMS_GREETING, type ContactMethod } from "@/constants/site";
 import { formatUsPhone } from "@/lib/phone";
 import { trackProviderEvent } from "@/lib/track";
@@ -156,11 +157,17 @@ export default function ContactButtons({ providerId, methods = ["phone", "sms"],
         </div>
       )}
 
-      {toast && (
-        <div className="fixed inset-x-0 bottom-24 z-50 mx-auto w-fit max-w-[90%] rounded-full bg-black/80 px-4 py-2 text-sm text-white">
-          {toast}
-        </div>
-      )}
+      {toast &&
+        // 挂到 <body>：详情页底部悬浮栏有 backdrop-blur，放在里面 fixed 会相对悬浮栏定位，提示就盖住了拨号按钮
+        createPortal(
+          <div
+            role="status"
+            className="pointer-events-none fixed inset-x-0 bottom-[calc(9rem+env(safe-area-inset-bottom))] z-50 mx-auto w-fit max-w-[90%] rounded-full bg-black/80 px-4 py-2 text-sm text-white"
+          >
+            {toast}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

@@ -46,7 +46,7 @@ export default async function AskListPage({ searchParams }: { searchParams: Prom
       </section>
 
       <section className="space-y-2">
-        <nav aria-label="片区" className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+        <nav aria-label="片区" className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           <Link href={href({ area: undefined, page: undefined })} className={chip(!area)} aria-current={!area ? "page" : undefined}>
             全部片区
           </Link>
@@ -56,7 +56,7 @@ export default async function AskListPage({ searchParams }: { searchParams: Prom
             </Link>
           ))}
         </nav>
-        <nav aria-label="分类" className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+        <nav aria-label="分类" className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           <Link href={href({ group: undefined, page: undefined })} className={chip(!group)} aria-current={!group ? "page" : undefined}>
             全部分类
           </Link>

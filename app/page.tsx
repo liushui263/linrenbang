@@ -32,6 +32,8 @@ interface SP {
   groups?: string;
   q?: string;
   page?: string;
+  /** 片区：URL 里的优先，没有就用 cookie 里记住的 */
+  area?: string;
 }
 
 function href(params: Record<string, string | undefined>) {
@@ -123,7 +125,8 @@ function CategoryNav({ category, group, q }: { category?: string; group?: Catego
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const [loc, user] = await Promise.all([getVisitorLocation(), getCurrentUser().catch(() => null)]);
+  const [visitor, user] = await Promise.all([getVisitorLocation(), getCurrentUser().catch(() => null)]);
+  const loc = sp.area && visitor.city.areas.includes(sp.area) ? { ...visitor, area: sp.area } : visitor;
   const myShop = await getMyProvider(user?.id).catch(() => null);
   let category = sp.category && CATEGORY_IDS.includes(sp.category) ? sp.category : undefined;
   const group = category ? groupOfCategory(category) : findGroup(sp.group);
@@ -500,9 +503,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </section>
 
           <section>
+            {/* 上面“今日推荐”里的商家不在这里重复出现，所以有今日推荐时叫“更多”，不叫“全部” */}
             <h2 className="mb-2 font-bold text-gray-900">
-              {where} · {scopeName ?? "全部"}
-              <span className="ml-2 text-sm font-normal text-gray-400">按邻居推荐数排序</span>
+              {where} · {showRotation ? `更多${scopeName ?? "商家"}` : (scopeName ?? "全部")}
+              <span className="ml-2 text-sm font-normal text-gray-400">
+                按邻居推荐数排序{showRotation ? "，今日推荐的不重复列出" : ""}
+              </span>
             </h2>
             {list.providers.length === 0 && !showRotation ? (
               <div className="rounded-2xl bg-white p-6 text-center text-sm text-gray-600">
@@ -522,6 +528,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   。
                 </p>
               </div>
+            ) : list.providers.length === 0 ? (
+              <p className="rounded-2xl bg-white p-4 text-center text-sm text-gray-500">
+                {where}暂时只有上面这几家{scopeName ? `${scopeName}` : ""}。用过别家靠谱的？
+                <Link href="/recommend" className="text-emerald-700 underline">
+                  推荐一个
+                </Link>
+              </p>
             ) : (
               <div className="space-y-3">
                 {list.providers.map((p) => (
