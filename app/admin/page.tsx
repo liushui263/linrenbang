@@ -102,9 +102,14 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-8 py-6">
-      <div>
-        <h1 className="text-xl font-bold">站长审核</h1>
-        <p className="text-sm text-gray-500">创始名额已用 {foundingCount.count ?? 0} / 100</p>
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-bold">站长审核</h1>
+          <p className="text-sm text-gray-500">创始名额已用 {foundingCount.count ?? 0} / 100</p>
+        </div>
+        <Link href="/admin/stats" className="shrink-0 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-medium text-white">
+          📊 数据看板
+        </Link>
       </div>
 
       {otherCounts.length > 0 && (
