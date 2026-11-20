@@ -3,6 +3,7 @@ import { CITIES } from "@/constants/cities";
 import { CONTACT_METHODS } from "@/constants/site";
 import { FieldError } from "./ActionForm";
 import CategoryPicker from "./CategoryPicker";
+import ServiceAreaPicker from "./ServiceAreaPicker";
 
 export interface ProviderDefaults {
   name?: string;
@@ -61,17 +62,7 @@ export default function ProviderFields({
           ))}
         </select>
       </div>
-      <fieldset>
-        <legend className={label}>覆盖片区 *（可多选）</legend>
-        <div className="mt-1 flex flex-wrap gap-2">
-          {city.areas.map((a) => (
-            <label key={a} className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm">
-              <input type="checkbox" name="service_areas" value={a} defaultChecked={d.service_areas?.includes(a)} />
-              {a}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <ServiceAreaPicker areas={city.areas} metroZh={city.metroZh} selected={d.service_areas} />
       <FieldError name="service_areas" />
       {showPhone && (
         <div>

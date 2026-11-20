@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { providerCategoryLabel, providerCategoryLabels } from "@/constants/categories";
+import { formatServiceAreas } from "@/constants/cities";
 import { foundingDaysLeft, isFoundingActive } from "@/lib/rotation";
 import type { PublicProvider } from "@/lib/types";
 import ContactButtons from "./ContactButtons";
@@ -71,7 +72,7 @@ export default function ProviderCard({ provider: p, isTodayPick, newKind, expand
 
       {/* 5. 服务片区 / 语言 / 急修 */}
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-        {p.service_areas.length > 0 && <span>服务：{p.service_areas.join(", ")}</span>}
+        {p.service_areas.length > 0 && <span>服务区域：{formatServiceAreas(p.city_id, p.service_areas)}</span>}
         {p.languages.length > 0 && <span>语言：{p.languages.join("、")}</span>}
         {p.emergency_24h && <span className="rounded bg-red-50 px-1.5 py-0.5 font-medium text-red-600">24h 急修</span>}
       </div>
@@ -102,7 +103,7 @@ export default function ProviderCard({ provider: p, isTodayPick, newKind, expand
     </div>
   );
   const extras = [
-    p.service_areas.length > 0 && `服务：${p.service_areas.join(", ")}`,
+    p.service_areas.length > 0 && `服务区域：${formatServiceAreas(p.city_id, p.service_areas)}`,
     p.languages.length > 0 && `语言：${p.languages.join("、")}`,
   ].filter(Boolean);
   const compactBody = (

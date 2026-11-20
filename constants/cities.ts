@@ -7,6 +7,8 @@ export interface City {
   zipPrefixes: string[];
   status: CityStatus;
   areas: string[]; // 片区，按城市配，不共用
+  /** 片区全选时的统称，如“大休斯顿地区” */
+  metroZh: string;
   /** 每个片区一个代表 Zip：没开通城市的访客点一下就切过来 */
   areaZips: Record<string, string>;
 }
@@ -18,6 +20,7 @@ export const CITIES: City[] = [
     en: "Houston",
     zipPrefixes: ["770", "771", "772", "773", "774", "775"],
     status: "live",
+    metroZh: "大休斯顿地区",
     areas: ["Katy", "Sugar Land", "Chinatown", "Cypress", "Woodlands", "Pearland", "Clear Lake", "Inner Loop"],
     areaZips: {
       Katy: "77494",
@@ -37,6 +40,13 @@ export const DEFAULT_CITY_ID = "houston";
 
 export function getCity(id: string | undefined | null): City {
   return CITIES.find((c) => c.id === id) ?? CITIES.find((c) => c.id === DEFAULT_CITY_ID)!;
+}
+
+/** 服务区域显示：该城市片区全选时只显示统称（如“大休斯顿地区”），否则列片区名 */
+export function formatServiceAreas(cityId: string | undefined | null, areas: string[], sep = ", "): string {
+  const city = getCity(cityId);
+  if (city.areas.length > 0 && city.areas.every((a) => areas.includes(a))) return city.metroZh;
+  return areas.join(sep);
 }
 
 export function isValidZip(zip: string): boolean {
