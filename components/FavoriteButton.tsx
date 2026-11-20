@@ -117,7 +117,7 @@ export default function FavoriteButton({ providerId, initial }: { providerId: st
               href={`/login?next=${encodeURIComponent(pathname || "/")}`}
               className="mt-4 block w-full rounded-xl bg-emerald-600 py-3 text-center font-medium text-white"
             >
-              用 Google 登录
+              去登录
             </Link>
             <button type="button" onClick={() => setAskLogin(false)} className="mt-2 w-full py-2 text-sm text-gray-500">
               先不用

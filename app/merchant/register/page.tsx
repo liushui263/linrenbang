@@ -55,9 +55,9 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         <h1 className="text-xl font-bold">商家免费注册</h1>
         {banner}
         <div className="rounded-2xl bg-white p-4 text-sm">
-          第一步：用 Google 账号登录（一个账号只能注册一个商家）。
+          第一步：用 Google 或邮箱登录（一个账号只能注册一个商家）。
           <Link href="/login?next=/merchant/register" className="mt-3 block rounded-xl bg-emerald-600 py-3 text-center font-medium text-white">
-            Google 登录后继续
+            登录后继续
           </Link>
         </div>
       </div>
