@@ -8,12 +8,15 @@ interface Props {
   providerId: string;
   hasWechat: boolean;
   paused: boolean;
+  /** 列表里的紧凑版：按钮矮一点 */
+  compact?: boolean;
 }
 
 type Contact = { phone: string; wechat_id: string | null };
 
 /** 13.6：电话和微信不在 HTML 里，点按钮才从接口取 */
-export default function ContactButtons({ providerId, hasWechat, paused }: Props) {
+export default function ContactButtons({ providerId, hasWechat, paused, compact }: Props) {
+  const py = compact ? "py-2" : "py-3";
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState<"call" | "wechat" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -84,7 +87,7 @@ export default function ContactButtons({ providerId, hasWechat, paused }: Props)
     return (
       <button
         disabled
-        className="w-full rounded-xl bg-gray-200 py-3 text-sm font-medium text-gray-500"
+        className={`w-full rounded-xl bg-gray-200 ${py} text-sm font-medium text-gray-500`}
         aria-disabled="true"
       >
         近期排期已满 · 暂不接单
@@ -99,7 +102,7 @@ export default function ContactButtons({ providerId, hasWechat, paused }: Props)
           <button
             onClick={onWechat}
             disabled={loading !== null}
-            className="flex-1 rounded-xl border border-emerald-600 py-3 text-sm font-medium text-emerald-700 active:bg-emerald-50 disabled:opacity-60"
+            className={`flex-1 rounded-xl border border-emerald-600 ${py} text-sm font-medium text-emerald-700 active:bg-emerald-50 disabled:opacity-60`}
           >
             {loading === "wechat" ? "获取中…" : contact?.wechat_id ? `微信：${contact.wechat_id}` : "复制微信"}
           </button>
@@ -107,7 +110,7 @@ export default function ContactButtons({ providerId, hasWechat, paused }: Props)
         <button
           onClick={onCall}
           disabled={loading !== null}
-          className="flex-1 rounded-xl bg-emerald-600 py-3 text-sm font-medium text-white active:bg-emerald-700 disabled:opacity-60"
+          className={`flex-1 rounded-xl bg-emerald-600 ${py} text-sm font-medium text-white active:bg-emerald-700 disabled:opacity-60`}
         >
           {loading === "call" ? "获取中…" : contact ? `拨打 ${formatUsPhone(contact.phone)}` : "一键拨号"}
         </button>

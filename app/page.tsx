@@ -20,7 +20,7 @@ import { HOME_ASK_COUNT, titleFromSearch } from "@/lib/ask";
 import { getLatestAsks, similarAsks } from "@/lib/asks";
 import { getVisitorLocation } from "@/lib/location";
 import { getCurrentUser } from "@/lib/auth";
-import { getGroupRotation, getMyProvider, getSeasonalPicks, getTodayRotation, listProviders } from "@/lib/providers";
+import { getGroupRotation, getMyProvider, getNewToday, getSeasonalPicks, getTodayRotation, listProviders } from "@/lib/providers";
 import { currentReminders } from "@/lib/seasonal";
 
 export const dynamic = "force-dynamic";
@@ -157,13 +157,22 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     : groupParam && group
       ? await getGroupRotation(loc.city.id, group.categories)
       : await getTodayRotation(loc.city.id, category);
+  // 今天新被邻居推荐的排在“今日”最前面（和轮换去重），同样从下面的列表里排除
+  const newToday = q
+    ? []
+    : await getNewToday(loc.city.id, category ? [category] : groupParam ? group?.categories : undefined).catch(() => []);
+  const newIds = new Set(newToday.map((p) => p.id));
+  const todayCards = [
+    ...newToday.map((p) => ({ p, isNew: true })),
+    ...rotation.filter((p) => !newIds.has(p.id)).map((p) => ({ p, isNew: false })),
+  ];
   const list = await listProviders(
     q
       ? { cityId: loc.city.id, categories: searchCats.length ? searchCats : undefined, area: loc.area ?? undefined, q, page }
       : { cityId: loc.city.id, category, categories: groupParam ? group?.categories : undefined, area: loc.area ?? undefined, page },
-    rotation.map((p) => p.id),
+    todayCards.map(({ p }) => p.id),
   );
-  const showRotation = rotation.length > 0 && page === 1;
+  const showRotation = todayCards.length > 0 && page === 1;
   // 首页（不搜索、不选分类、第一页）显示“邻居在求推荐”；搜不到时找类似的提问
   const showAsks = !q && !category && !group && page === 1;
   const [homeAsks, similar] = await Promise.all([
@@ -438,9 +447,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 <span className="text-xs font-normal text-gray-400">每天 0 点换一批</span>
               </h2>
               <div className="space-y-3">
-                {rotation.map((p) => (
-                  <ProviderCard key={p.id} provider={p} isTodayPick />
-                ))}
+                {todayCards.map(({ p, isNew }) =>
+                  isNew ? (
+                    <ProviderCard key={p.id} provider={p} isNewToday />
+                  ) : (
+                    <ProviderCard key={p.id} provider={p} isTodayPick />
+                  ),
+                )}
               </div>
             </section>
           )}

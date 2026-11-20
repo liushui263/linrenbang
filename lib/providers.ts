@@ -1,7 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import { CATEGORY_IDS } from "@/constants/categories";
-import { PAGE_SIZE, ROTATION_POOL_PER_CATEGORY } from "@/constants/site";
+import { NEW_TODAY_LIMIT, PAGE_SIZE, ROTATION_POOL_PER_CATEGORY } from "@/constants/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { chicagoDateString, chicagoDayBounds, dayIndexFor, pickDailyRotation, pickHomeRotation } from "@/lib/rotation";
@@ -62,6 +62,56 @@ export async function getGroupRotation(cityId: string, categoryIds: string[]): P
     categoryIds.map(async (c) => pickDailyRotation(await rotationPool(cityId, c), dayIndex)),
   );
   return pickHomeRotation(perCategory, dayIndex);
+}
+
+/**
+ * 今天（芝加哥日期）有新邻居推荐的商家：推荐今天被通过（updated_at），或者商家今天刚通过审核（approved_at）。
+ * 按最新一条在前，排在“今日邻人推荐”最前面。传 categories 时只看这几个分类（分类页 / 大类页）。
+ */
+export async function getNewToday(cityId: string, categories?: string[], limit = NEW_TODAY_LIMIT): Promise<PublicProvider[]> {
+  const supabase = await createClient();
+  const { start } = chicagoDayBounds(chicagoDateString());
+  const [{ data: recs }, { data: approved }] = await Promise.all([
+    supabase
+      .from("recommendations")
+      .select("provider_id, updated_at")
+      .eq("status", "active")
+      .gte("updated_at", start)
+      .order("updated_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("providers")
+      .select("id, approved_at")
+      .eq("city_id", cityId)
+      .gte("approved_at", start)
+      .order("approved_at", { ascending: false })
+      .limit(50),
+  ]);
+  // 每个商家取它今天最新的那个时间
+  const latest = new Map<string, string>();
+  for (const r of recs ?? []) {
+    const t = r.updated_at as string;
+    if (!latest.has(r.provider_id) || latest.get(r.provider_id)! < t) latest.set(r.provider_id, t);
+  }
+  for (const r of approved ?? []) {
+    const t = r.approved_at as string;
+    if (!latest.has(r.id) || latest.get(r.id)! < t) latest.set(r.id, t);
+  }
+  const ids = [...latest.keys()].filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+  if (ids.length === 0) return [];
+  let query = supabase
+    .from("providers")
+    .select(PUBLIC_PROVIDER_COLUMNS)
+    .eq("city_id", cityId)
+    .in("status", ["active", "paused"])
+    .in("id", ids);
+  if (categories?.length) query = query.overlaps("categories", categories);
+  const { data } = await query;
+  const ts = (p: PublicProvider) => Date.parse(latest.get(p.id) ?? "") || 0;
+  return ((data ?? []) as unknown as PublicProvider[])
+    .filter((p) => p.recommend_count > 0)
+    .sort((a, b) => ts(b) - ts(a))
+    .slice(0, limit);
 }
 
 /** 13.1 第 5 步：当天第一次请求时顺带写 ad_placements（响应发出后再写，不拖慢页面） */
