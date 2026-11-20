@@ -26,7 +26,8 @@ function fakeQuery(table: Row[]) {
     in: (c: string, vs: unknown[]) => (preds.push((r) => vs.includes(r[c])), q),
     gt: (c: string, v: string) => (preds.push((r) => r[c] != null && String(r[c]) > v), q),
     lt: (c: string, v: string) => (preds.push((r) => r[c] != null && String(r[c]) < v), q),
-    contains: (c: string, vs: unknown[]) => (preds.push((r) => vs.every((v) => (r[c] as unknown[]).includes(v))), q),
+    contains: (c: string, vs: unknown[]) => (preds.push((r) => vs.every((v) => ((r[c] as unknown[]) ?? []).includes(v))), q),
+    overlaps: (c: string, vs: unknown[]) => (preds.push((r) => vs.some((v) => ((r[c] as unknown[]) ?? []).includes(v))), q),
     not: (c: string, op: string, v: string) => {
       if (op === "in") {
         const ids = v.replace(/[()]/g, "").split(",");
@@ -71,6 +72,7 @@ function provider(id: string, over: Partial<PublicProvider> = {}): Row {
     city_id: "houston",
     name: id,
     category: "hvac",
+    categories: ["hvac"],
     status: "active",
     service_areas: [],
     recommend_count: 0,
