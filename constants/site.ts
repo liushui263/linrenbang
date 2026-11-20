@@ -6,9 +6,12 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://linrenbang.
 export const FOUNDING_SLOTS = 100; // 前 100 名创始商家
 export const FOUNDING_DAYS = 100; // 创始有效期 100 天，自审核通过日起算，到期自动失效
 export const ROTATION_POOL_PER_CATEGORY = 10; // 每分类、创始有效期内、通过最早的 10 名进轮换池
-export const MAX_ROTATION_PER_LIST = 2; // 每页列表顶部最多 2 条轮换
+export const MAX_ROTATION_PER_LIST = 2; // 轮换函数的默认条数（测试和旧调用）
+export const TODAY_PICKS = 6; // “今日邻人推荐”公平轮换取几家；同时也是一屏最多显示几张，多了就每 10 秒滚动一张
 export const PAGE_SIZE = 20;
-export const NEW_TODAY_LIMIT = 5; // “今日邻人推荐”最前面最多放几位今天新被推荐的
+export const NEW_PICKS_LIMIT = 6; // “今日邻人推荐”最前面最多放几位新加入 / 新被推荐的
+export const NEW_PICKS_DAYS = 7; // 多少天内通过审核的商家、通过的推荐算“新”
+export const TODAY_SCROLL_MS = 10_000; // 多于一屏时，每隔多久滚动一张
 
 export const ROTATION_EPOCH = "2026-01-01"; // dayIndex 起算日
 export const ROTATION_TIME_ZONE = "America/Chicago";

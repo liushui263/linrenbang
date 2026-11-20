@@ -3,6 +3,7 @@ import AreaSelect from "@/components/AreaSelect";
 import { AskRow } from "@/components/AskCard";
 import ProviderCard from "@/components/ProviderCard";
 import SeasonalCard from "@/components/SeasonalCard";
+import TodayPicks from "@/components/TodayPicks";
 import UnsupportedCityNotice from "@/components/UnsupportedCityNotice";
 import { nearbyLiveCities } from "@/constants/cities";
 import {
@@ -20,7 +21,7 @@ import { HOME_ASK_COUNT, titleFromSearch } from "@/lib/ask";
 import { getLatestAsks, similarAsks } from "@/lib/asks";
 import { getVisitorLocation } from "@/lib/location";
 import { getCurrentUser } from "@/lib/auth";
-import { getGroupRotation, getMyProvider, getNewToday, getSeasonalPicks, getTodayRotation, listProviders } from "@/lib/providers";
+import { getGroupRotation, getMyProvider, getNewPicks, getSeasonalPicks, getTodayRotation, listProviders } from "@/lib/providers";
 import { currentReminders } from "@/lib/seasonal";
 
 export const dynamic = "force-dynamic";
@@ -160,14 +161,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     : groupParam && group
       ? await getGroupRotation(loc.city.id, group.categories)
       : await getTodayRotation(loc.city.id, category);
-  // 今天新被邻居推荐的排在“今日”最前面（和轮换去重），同样从下面的列表里排除
-  const newToday = q
+  // 最近新加入 / 新被推荐的排在“今日”最前面（和轮换去重），同样从下面的列表里排除
+  const newPicks = q
     ? []
-    : await getNewToday(loc.city.id, category ? [category] : groupParam ? group?.categories : undefined).catch(() => []);
-  const newIds = new Set(newToday.map((p) => p.id));
+    : await getNewPicks(loc.city.id, category ? [category] : groupParam ? group?.categories : undefined).catch(() => []);
+  const newIds = new Set(newPicks.map((n) => n.provider.id));
   const todayCards = [
-    ...newToday.map((p) => ({ p, isNew: true })),
-    ...rotation.filter((p) => !newIds.has(p.id)).map((p) => ({ p, isNew: false })),
+    ...newPicks.map((n) => ({ p: n.provider, newKind: n.kind })),
+    ...rotation.filter((p) => !newIds.has(p.id)).map((p) => ({ p, newKind: undefined })),
   ];
   const list = await listProviders(
     q
@@ -449,15 +450,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 {scopeName ? `今日推荐 · ${scopeName}` : "今日邻人推荐"}
                 <span className="text-xs font-normal text-gray-400">每天 0 点换一批</span>
               </h2>
-              <div className="space-y-3">
-                {todayCards.map(({ p, isNew }) =>
-                  isNew ? (
-                    <ProviderCard key={p.id} provider={p} isNewToday />
+              <TodayPicks>
+                {todayCards.map(({ p, newKind }) =>
+                  newKind ? (
+                    <ProviderCard key={p.id} provider={p} newKind={newKind} />
                   ) : (
                     <ProviderCard key={p.id} provider={p} isTodayPick />
                   ),
                 )}
-              </div>
+              </TodayPicks>
             </section>
           )}
 

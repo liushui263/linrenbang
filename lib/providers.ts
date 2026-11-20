@@ -1,7 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import { CATEGORY_IDS } from "@/constants/categories";
-import { NEW_TODAY_LIMIT, PAGE_SIZE, ROTATION_POOL_PER_CATEGORY } from "@/constants/site";
+import { NEW_PICKS_DAYS, NEW_PICKS_LIMIT, PAGE_SIZE, ROTATION_POOL_PER_CATEGORY, TODAY_PICKS } from "@/constants/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { chicagoDateString, chicagoDayBounds, dayIndexFor, pickDailyRotation, pickHomeRotation } from "@/lib/rotation";
@@ -36,13 +36,13 @@ async function rotationPool(cityId: string, category: string): Promise<PublicPro
   return (data ?? []) as unknown as PublicProvider[];
 }
 
-/** 今日轮换：传 category 返回该分类的 2 家；不传返回首页的 2 家 */
+/** 今日轮换：传 category 返回该分类当天的 6 家；不传返回首页的 6 家（各分类轮着取） */
 export async function getTodayRotation(cityId: string, category?: string): Promise<PublicProvider[]> {
   const date = chicagoDateString();
   const dayIndex = dayIndexFor(date);
 
   if (category) {
-    const picked = pickDailyRotation(await rotationPool(cityId, category), dayIndex);
+    const picked = pickDailyRotation(await rotationPool(cityId, category), dayIndex, TODAY_PICKS);
     recordRotationLazily(cityId, "category_rotation", category, picked, date);
     return picked;
   }
@@ -50,7 +50,7 @@ export async function getTodayRotation(cityId: string, category?: string): Promi
   const perCategory = await Promise.all(
     CATEGORY_IDS.map(async (c) => pickDailyRotation(await rotationPool(cityId, c), dayIndex)),
   );
-  const picked = pickHomeRotation(perCategory, dayIndex);
+  const picked = pickHomeRotation(perCategory, dayIndex, TODAY_PICKS);
   recordRotationLazily(cityId, "home_rotation", null, picked, date);
   return picked;
 }
@@ -61,42 +61,46 @@ export async function getGroupRotation(cityId: string, categoryIds: string[]): P
   const perCategory = await Promise.all(
     categoryIds.map(async (c) => pickDailyRotation(await rotationPool(cityId, c), dayIndex)),
   );
-  return pickHomeRotation(perCategory, dayIndex);
+  return pickHomeRotation(perCategory, dayIndex, TODAY_PICKS);
 }
 
+export type NewPick = { provider: PublicProvider; kind: "joined" | "recommended" };
+
 /**
- * 今天（芝加哥日期）有新邻居推荐的商家：推荐今天被通过（updated_at），或者商家今天刚通过审核（approved_at）。
- * 按最新一条在前，排在“今日邻人推荐”最前面。传 categories 时只看这几个分类（分类页 / 大类页）。
+ * 最近 7 天（按芝加哥日期，含今天）新加入的商家（approved_at），以及新通过了邻居推荐的商家
+ * （recommendations.updated_at），最新的在前，排在“今日邻人推荐”最前面。
+ * 新加入的商家即使还没有推荐也算。传 categories 时只看这几个分类（分类页 / 大类页）。
  */
-export async function getNewToday(cityId: string, categories?: string[], limit = NEW_TODAY_LIMIT): Promise<PublicProvider[]> {
+export async function getNewPicks(cityId: string, categories?: string[], limit = NEW_PICKS_LIMIT): Promise<NewPick[]> {
   const supabase = await createClient();
-  const { start } = chicagoDayBounds(chicagoDateString());
-  const [{ data: recs }, { data: approved }] = await Promise.all([
+  const today = chicagoDateString();
+  const since = chicagoDayBounds(chicagoDateString(new Date(Date.parse(`${today}T12:00:00Z`) - (NEW_PICKS_DAYS - 1) * 86_400_000))).start;
+  const [{ data: recs }, { data: joined }] = await Promise.all([
     supabase
       .from("recommendations")
       .select("provider_id, updated_at")
       .eq("status", "active")
-      .gte("updated_at", start)
+      .gte("updated_at", since)
       .order("updated_at", { ascending: false })
-      .limit(100),
+      .limit(200),
     supabase
       .from("providers")
       .select("id, approved_at")
       .eq("city_id", cityId)
-      .gte("approved_at", start)
+      .in("status", ["active", "paused"])
+      .gte("approved_at", since)
       .order("approved_at", { ascending: false })
-      .limit(50),
+      .limit(100),
   ]);
-  // 每个商家取它今天最新的那个时间
-  const latest = new Map<string, string>();
-  for (const r of recs ?? []) {
-    const t = r.updated_at as string;
-    if (!latest.has(r.provider_id) || latest.get(r.provider_id)! < t) latest.set(r.provider_id, t);
-  }
-  for (const r of approved ?? []) {
-    const t = r.approved_at as string;
-    if (!latest.has(r.id) || latest.get(r.id)! < t) latest.set(r.id, t);
-  }
+  // 每个商家取最新的那个时间；新加入优先标成“新加入”
+  const latest = new Map<string, { at: string; kind: NewPick["kind"] }>();
+  const note = (id: string, at: string, kind: NewPick["kind"]) => {
+    const cur = latest.get(id);
+    if (!cur) latest.set(id, { at, kind });
+    else latest.set(id, { at: cur.at > at ? cur.at : at, kind: cur.kind === "joined" || kind === "joined" ? "joined" : kind });
+  };
+  for (const r of joined ?? []) note(r.id as string, r.approved_at as string, "joined");
+  for (const r of recs ?? []) note(r.provider_id as string, r.updated_at as string, "recommended");
   const ids = [...latest.keys()].filter((id) => /^[0-9a-f-]{36}$/i.test(id));
   if (ids.length === 0) return [];
   let query = supabase
@@ -107,11 +111,11 @@ export async function getNewToday(cityId: string, categories?: string[], limit =
     .in("id", ids);
   if (categories?.length) query = query.overlaps("categories", categories);
   const { data } = await query;
-  const ts = (p: PublicProvider) => Date.parse(latest.get(p.id) ?? "") || 0;
+  const ts = (p: PublicProvider) => Date.parse(latest.get(p.id)?.at ?? "") || 0;
   return ((data ?? []) as unknown as PublicProvider[])
-    .filter((p) => p.recommend_count > 0)
     .sort((a, b) => ts(b) - ts(a))
-    .slice(0, limit);
+    .slice(0, limit)
+    .map((p) => ({ provider: p, kind: latest.get(p.id)!.kind }));
 }
 
 /** 13.1 第 5 步：当天第一次请求时顺带写 ad_placements（响应发出后再写，不拖慢页面） */
