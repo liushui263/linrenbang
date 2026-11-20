@@ -4,6 +4,7 @@ import { foundingDaysLeft, isFoundingActive } from "@/lib/rotation";
 import type { PublicProvider } from "@/lib/types";
 import ContactButtons from "./ContactButtons";
 import FavoriteButton from "./FavoriteButton";
+import PhotoViewer from "./PhotoViewer";
 import ShareButton from "./ShareButton";
 
 interface Props {
@@ -27,10 +28,7 @@ export default function ProviderCard({ provider: p, isTodayPick, isNewToday, exp
       <div className="flex items-center gap-3">
         {p.avatar_url ? (
           // 详情页：头像大一点，点开看完整照片
-          <a href={p.avatar_url} target="_blank" rel="noopener" className="shrink-0" title="点开看大图">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={p.avatar_url} alt={`${p.name}的照片`} className="h-16 w-16 rounded-full border object-cover" />
-          </a>
+          <PhotoViewer src={p.avatar_url} alt={`${p.name}的照片`} className="h-16 w-16 rounded-full border object-cover" />
         ) : (
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-700">
             {p.name.slice(0, 1)}

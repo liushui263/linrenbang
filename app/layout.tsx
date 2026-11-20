@@ -52,7 +52,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                 <span className="hidden text-[10px] font-medium tracking-wide text-gray-500 sm:block">{SITE_SLOGAN_EN}</span>
               </span>
             </Link>
-            <CityBar cityName={loc.city.zh} zip={loc.zip} needsZip={!loc.hasChosen} />
+            <CityBar cityName={loc.city.zh} zip={loc.zip} needsZip={!loc.hasChosen} zipLive={!loc.zip || !!loc.zipCity} />
             {user ? (
               <Link href="/me" className="shrink-0 text-sm text-gray-600">
                 我的
