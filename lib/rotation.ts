@@ -20,22 +20,26 @@ export function dayIndexFor(dateStr: string): number {
   return Math.round(toUtcDays(dateStr) - toUtcDays(ROTATION_EPOCH));
 }
 
-/** 13.1 第 3 步：从轮换池（已按 founding_started_at 升序，最多 10 家）里取当天的 2 家 */
-export function pickDailyRotation<T>(pool: readonly T[], dayIndex: number): T[] {
+/**
+ * 13.1 第 3 步：从轮换池（已按 founding_started_at 升序，最多 10 家）里取当天连续的 count 家，
+ * 起点每天往后挪一位，所以每家轮到的天数一样多。
+ */
+export function pickDailyRotation<T>(pool: readonly T[], dayIndex: number, count = MAX_ROTATION_PER_LIST): T[] {
   const n = pool.length;
   if (n === 0) return [];
-  if (n <= MAX_ROTATION_PER_LIST) return [...pool];
+  if (n <= count) return [...pool];
   const i = ((dayIndex % n) + n) % n;
-  return [pool[i], pool[(i + 1) % n]];
+  return Array.from({ length: count }, (_, k) => pool[(i + k) % n]);
 }
 
 /**
- * 13.1 第 4 步：首页从各分类当天的轮换结果里聚合，优先挑不同分类的 2 家。
- * 起始分类随 dayIndex 变化，避免永远是同一个分类排第一。
+ * 13.1 第 4 步：首页从各分类当天的轮换结果里聚合，最多 limit 家：
+ * 一轮一轮地每个分类各取一家（先保证分类不同），起始分类随 dayIndex 变化，避免永远是同一个分类排第一。
  */
 export function pickHomeRotation<T extends { id: string }>(
   perCategory: readonly (readonly T[])[],
   dayIndex: number,
+  limit = MAX_ROTATION_PER_LIST,
 ): T[] {
   const nonEmpty = perCategory.filter((list) => list.length > 0);
   if (nonEmpty.length === 0) return [];
@@ -43,16 +47,12 @@ export function pickHomeRotation<T extends { id: string }>(
   const ordered = [...nonEmpty.slice(start), ...nonEmpty.slice(0, start)];
 
   const picked: T[] = [];
-  // 第一轮：每个分类各取第 1 家
-  for (const list of ordered) {
-    if (picked.length >= MAX_ROTATION_PER_LIST) break;
-    picked.push(list[0]);
-  }
-  // 不够 2 家时（只有一个分类有轮换池），再从剩下的补
-  for (const list of ordered) {
-    for (const item of list.slice(1)) {
-      if (picked.length >= MAX_ROTATION_PER_LIST) break;
-      if (!picked.some((p) => p.id === item.id)) picked.push(item);
+  const depth = Math.max(...ordered.map((list) => list.length));
+  for (let round = 0; round < depth && picked.length < limit; round++) {
+    for (const list of ordered) {
+      if (picked.length >= limit) break;
+      const item = list[round];
+      if (item && !picked.some((p) => p.id === item.id)) picked.push(item);
     }
   }
   return picked;

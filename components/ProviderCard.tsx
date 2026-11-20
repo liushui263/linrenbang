@@ -10,15 +10,15 @@ import ShareButton from "./ShareButton";
 interface Props {
   provider: PublicProvider;
   isTodayPick?: boolean;
-  /** 今天刚有邻居推荐（或今天刚通过审核），排在“今日邻人推荐”最前面 */
-  isNewToday?: boolean;
+  /** 最近几天新加入 / 新有邻居推荐，排在“今日邻人推荐”最前面 */
+  newKind?: "joined" | "recommended";
   expanded?: boolean; // 详情页的展开版
   /** 已知是收藏状态（“我的师傅”列表），按钮不用再查接口 */
   favorited?: boolean;
 }
 
 /** 第 8 节名片版式：一个组件，列表和详情页复用 */
-export default function ProviderCard({ provider: p, isTodayPick, isNewToday, expanded, favorited }: Props) {
+export default function ProviderCard({ provider: p, isTodayPick, newKind, expanded, favorited }: Props) {
   const founding = isFoundingActive(p.founding_expires_at);
   const summary = p.tagline || (p.description ? p.description.slice(0, 60) : "");
   const tags = expanded ? p.sub_tags : p.sub_tags.slice(0, 3);
@@ -108,8 +108,16 @@ export default function ProviderCard({ provider: p, isTodayPick, isNewToday, exp
   const compactBody = (
     <>
       <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
-        <span className="text-sm font-semibold text-orange-600">🔥 {p.recommend_count}位邻居推荐</span>
-        {isNewToday && <span className="rounded-full bg-orange-100 px-1.5 py-0.5 font-medium text-orange-700">今日新推荐</span>}
+        {p.recommend_count > 0 ? (
+          <span className="text-sm font-semibold text-orange-600">🔥 {p.recommend_count}位邻居推荐</span>
+        ) : (
+          <span className="text-sm text-gray-500">还没有邻居推荐</span>
+        )}
+        {newKind && (
+          <span className="rounded-full bg-orange-100 px-1.5 py-0.5 font-medium text-orange-700">
+            {newKind === "joined" ? "新加入" : "新推荐"}
+          </span>
+        )}
         {isTodayPick && <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 font-medium text-emerald-800">今日推荐</span>}
         {founding && p.founding_rank && (
           <span className="rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-amber-800">

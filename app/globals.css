@@ -22,3 +22,23 @@ body {
     linear-gradient(135deg, #065f46 0%, #059669 55%, #10b981 100%);
   background-size: 88px 88px, auto, auto;
 }
+
+/* 今日邻人推荐：滚动时新补进来的那张名片淡入 */
+@keyframes today-pick-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.today-pick-in {
+  animation: today-pick-in 0.4s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .today-pick-in {
+    animation: none;
+  }
+}

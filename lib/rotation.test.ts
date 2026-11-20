@@ -50,6 +50,12 @@ describe("pickDailyRotation", () => {
     expect(pickDailyRotation(pool, 4)).toEqual(["e", "a"]);
     expect(pickDailyRotation(pool, 5)).toEqual(["a", "b"]);
   });
+  it("takes a window of 6 that moves one place a day", () => {
+    const ten = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    expect(pickDailyRotation(ten, 0, 6)).toEqual(["0", "1", "2", "3", "4", "5"]);
+    expect(pickDailyRotation(ten, 7, 6)).toEqual(["7", "8", "9", "0", "1", "2"]);
+    expect(pickDailyRotation(["a", "b"], 3, 6)).toEqual(["a", "b"]);
+  });
   it("changes day to day and is stable within a day", () => {
     expect(pickDailyRotation(pool, 10)).toEqual(pickDailyRotation(pool, 10));
     expect(pickDailyRotation(pool, 10)).not.toEqual(pickDailyRotation(pool, 11));
@@ -72,6 +78,14 @@ describe("pickHomeRotation", () => {
   });
   it("returns empty when no pools", () => {
     expect(pickHomeRotation([[], []], 0)).toEqual([]);
+  });
+  it("takes up to 6, one per category per round", () => {
+    const res = pickHomeRotation([[p("a1"), p("a2"), p("a3")], [p("b1"), p("b2")], [p("c1")]], 0, 6);
+    expect(res.map((x) => x.id)).toEqual(["a1", "b1", "c1", "a2", "b2", "a3"]);
+  });
+  it("stops at the limit", () => {
+    const res = pickHomeRotation([[p("a1"), p("a2")], [p("b1"), p("b2")], [p("c1"), p("c2")], [p("d1")]], 2, 6);
+    expect(res.map((x) => x.id)).toEqual(["c1", "d1", "a1", "b1", "c2", "a2"]);
   });
 });
 
