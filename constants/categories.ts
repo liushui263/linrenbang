@@ -73,10 +73,26 @@ export function categoryName(id: string): string {
   return CATEGORIES.find((c) => c.id === id)?.zh ?? id;
 }
 
-/** 商家在名片上显示的分类：“其他服务”显示商家自己填的服务名 */
-export function providerCategoryLabel(p: { category: string; custom_service?: string | null }): string {
-  if (p.category === OTHER_CATEGORY && p.custom_service?.trim()) return p.custom_service.trim();
-  return categoryName(p.category);
+/** 一个商家最多选几个分类 */
+export const MAX_CATEGORIES = 3;
+
+type HasCategories = { category: string; categories?: string[] | null; custom_service?: string | null };
+
+/** 商家的全部分类（第一个是主营）。兼容还没有 categories 的旧数据 */
+export function providerCategories(p: HasCategories): string[] {
+  return p.categories?.length ? p.categories : [p.category];
+}
+
+/** 每个分类在名片上的名字：“其他服务”显示商家自己填的服务名 */
+export function providerCategoryLabels(p: HasCategories): string[] {
+  return providerCategories(p).map((id) =>
+    id === OTHER_CATEGORY && p.custom_service?.trim() ? p.custom_service.trim() : categoryName(id),
+  );
+}
+
+/** 一行文字版（分享标题、审核列表等）：“空调暖气、水暖管道” */
+export function providerCategoryLabel(p: HasCategories): string {
+  return providerCategoryLabels(p).join("、");
 }
 
 export const LANGUAGES = ["国语", "粤语", "English", "台语", "上海话"];

@@ -8,6 +8,7 @@ export interface ProviderDefaults {
   name?: string;
   phone?: string;
   category?: string;
+  categories?: string[];
   custom_service?: string | null;
   city_id?: string;
   service_areas?: string[];
@@ -49,7 +50,7 @@ export default function ProviderFields({
         <input name="name" required maxLength={60} defaultValue={d.name} className={input} placeholder="如：老王空调" />
         <FieldError name="name" />
       </div>
-      <CategoryPicker category={d.category} customService={d.custom_service} />
+      <CategoryPicker categories={d.categories} category={d.category} customService={d.custom_service} />
       <div>
         <label className={label}>服务城市 *</label>
         <select name="city_id" defaultValue={city.id} className={input}>

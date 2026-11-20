@@ -4,9 +4,16 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { dbErrorMessage, ensureUserRow, getCurrentUser } from "@/lib/auth";
 import { parseProviderForm, parseRecommendationForm } from "@/lib/provider-form";
+import { checkCanAnswer, insertAskAnswer } from "@/lib/ask-answer";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type FormState = { error?: string; ok?: string; fieldErrors?: Record<string, string> } | undefined;
+
+/** 从求推荐页进来的（/recommend?ask=...）：表单里带 ask_id，提交后顺带写一条回答 */
+function askIdOf(fd: FormData): string | null {
+  const id = String(fd.get("ask_id") ?? "");
+  return /^[0-9a-f-]{36}$/i.test(id) ? id : null;
+}
 
 /** 7.3 邻居写推荐：pending，站长通过后展示；一人一商家一条，可编辑；商家不能推荐自己 */
 export async function submitRecommendation(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -24,13 +31,33 @@ export async function submitRecommendation(_prev: FormState, fd: FormData): Prom
 
   const parsed = parseRecommendationForm(fd);
   if (!parsed.data) return { error: parsed.error, fieldErrors: parsed.fieldErrors };
+  const askId = askIdOf(fd);
+  if (askId) {
+    const blocked = await checkCanAnswer(askId, user.id);
+    if (blocked) return { error: blocked };
+  }
   await ensureUserRow(user);
 
-  const { error } = await admin
+  const { data: rec, error } = await admin
     .from("recommendations")
-    .upsert({ provider_id: providerId, user_id: user.id, ...parsed.data, status: "pending" }, { onConflict: "provider_id,user_id" });
+    .upsert({ provider_id: providerId, user_id: user.id, ...parsed.data, status: "pending" }, { onConflict: "provider_id,user_id" })
+    .select("id")
+    .single();
   if (error) return { error: dbErrorMessage("submitRecommendation", error) };
   revalidatePath(`/provider/${providerId}`);
+  if (askId) {
+    const res = await insertAskAnswer({
+      askId,
+      providerId,
+      userId: user.id,
+      area: parsed.data.recommender_area,
+      comment: parsed.data.comment,
+      usedIt: true,
+      recommendationId: rec.id,
+    });
+    if (res.error) return { error: res.error };
+    redirect(`/ask/${askId}?answered=1`);
+  }
   return { ok: "已提交，站长审核通过后就会显示。谢谢你帮邻居！" };
 }
 
@@ -42,6 +69,11 @@ export async function submitNeighborProvider(_prev: FormState, fd: FormData): Pr
   const r = parseRecommendationForm(fd);
   if (!p.data || !r.data) {
     return { error: p.error ?? r.error, fieldErrors: { ...p.fieldErrors, ...r.fieldErrors } };
+  }
+  const askId = askIdOf(fd);
+  if (askId) {
+    const blocked = await checkCanAnswer(askId, user.id);
+    if (blocked) return { error: blocked };
   }
   await ensureUserRow(user);
 
@@ -55,9 +87,25 @@ export async function submitNeighborProvider(_prev: FormState, fd: FormData): Pr
     if (error.code === "23505") return { fieldErrors: { phone: "这个电话已经有人登记过了，请回到上一步查一下" } };
     return { error: dbErrorMessage("submitNeighborProvider", error) };
   }
-  const { error: recError } = await admin
+  const { data: rec, error: recError } = await admin
     .from("recommendations")
-    .insert({ provider_id: created.id, user_id: user.id, ...r.data, status: "pending" });
+    .insert({ provider_id: created.id, user_id: user.id, ...r.data, status: "pending" })
+    .select("id")
+    .single();
   if (recError) return { error: dbErrorMessage("submitNeighborProvider.rec", recError) };
+  if (askId) {
+    // 新师傅还在审核中：回答先显示名字，站长通过后才显示电话和微信
+    const res = await insertAskAnswer({
+      askId,
+      providerId: created.id,
+      userId: user.id,
+      area: r.data.recommender_area,
+      comment: r.data.comment,
+      usedIt: true,
+      recommendationId: rec.id,
+    });
+    if (res.error) return { error: res.error };
+    redirect(`/ask/${askId}?answered=1`);
+  }
   redirect("/recommend?submitted=1");
 }

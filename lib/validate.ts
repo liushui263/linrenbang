@@ -1,4 +1,5 @@
 /** 前后端共用的字段校验：返回错误文字，没问题返回 null */
+import { MAX_CATEGORIES, OTHER_CATEGORY } from "@/constants/categories";
 import { CONTACT_METHOD_IDS } from "@/constants/site";
 import { toE164 } from "@/lib/phone";
 
@@ -6,15 +7,27 @@ export type FieldErrors = Record<string, string>;
 
 const LINK = /(https?:\/\/|www\.)/i;
 
+/** 表单里选中的分类（去重，主营 primary_category 排第一）；兼容旧的单个 category 字段 */
+export function selectedCategories(fd: FormData): string[] {
+  const list = fd.getAll("categories").map((x) => String(x).trim());
+  if (list.length === 0 && fd.get("category")) list.push(String(fd.get("category")).trim());
+  const primary = String(fd.get("primary_category") ?? "").trim();
+  if (primary && list.includes(primary)) list.unshift(primary);
+  return [...new Set(list.filter(Boolean))];
+}
+
 export function validateField(name: string, fd: FormData): string | null {
   const v = (k: string) => String(fd.get(k) ?? "").trim();
   switch (name) {
     case "name":
       return v("name") ? null : "请填写店名或称呼";
-    case "category":
-      return v("category") ? null : "请选择主营分类";
+    case "categories": {
+      const n = selectedCategories(fd).length;
+      if (n === 0) return "请至少选一个分类";
+      return n > MAX_CATEGORIES ? `最多选 ${MAX_CATEGORIES} 个分类` : null;
+    }
     case "custom_service": {
-      if (v("category") !== "other") return null;
+      if (!selectedCategories(fd).includes(OTHER_CATEGORY)) return null;
       const c = v("custom_service");
       if (c.length < 2) return "选了“其他服务”，请写一下具体做什么（2-12 个字，如：网站设计）";
       if (c.length > 12) return "服务名请控制在 12 个字以内";
