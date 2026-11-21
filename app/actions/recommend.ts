@@ -1,11 +1,24 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { dbErrorMessage, ensureUserRow, getCurrentUser } from "@/lib/auth";
 import { parseProviderForm, parseRecommendationForm } from "@/lib/provider-form";
 import { checkCanAnswer, insertAskAnswer } from "@/lib/ask-answer";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  ANON_CLAIM_COOKIE,
+  ANON_RECS_PER_DAY,
+  HONEYPOT_FIELD,
+  addClaimToken,
+  customServiceFrom,
+  guessCategory,
+  parseAnonForm,
+} from "@/lib/anon-recommend";
+import { hashClaimToken, newClaimToken, visitorIpHash } from "@/lib/anon-server";
+import { getVisitorLocation } from "@/lib/location";
+import { OTHER_CATEGORY } from "@/constants/categories";
 
 export type FormState =
   | {
@@ -116,4 +129,111 @@ export async function submitNeighborProvider(_prev: FormState, fd: FormData): Pr
     redirect(`/ask/${askId}?answered=1`);
   }
   redirect("/recommend?submitted=1");
+}
+
+/**
+ * 冷启动期的快速推荐（不用登录）：只填 名字 / 电话 / 服务内容。
+ * - 按电话查重：已有这位师傅 → 只加一条推荐；没有 → 新建商家（pending）+ 推荐（pending），站长审核后展示
+ * - 防刷：隐藏输入框（机器人会填）+ 同一 IP 24 小时最多 5 条；同一 IP 给同一位师傅再推荐 = 修改原来那条
+ * - 发一个认领码放在这个浏览器的 cookie 里，以后登录可以把推荐认到自己名下
+ * 从 /recommend?provider=... 进来时带 provider_id，只需要填服务内容
+ */
+export async function submitAnonRecommendation(_prev: FormState, fd: FormData): Promise<FormState> {
+  const done = (pid?: string) => redirect(`/recommend?submitted=1&anon=1${pid ? `&p=${pid}` : ""}`);
+  // 机器人：假装成功，什么都不写
+  if (String(fd.get(HONEYPOT_FIELD) ?? "").trim()) done();
+
+  const user = await getCurrentUser().catch(() => null);
+  const givenProviderId = String(fd.get("provider_id") ?? "");
+  const hasProvider = /^[0-9a-f-]{36}$/i.test(givenProviderId);
+  const parsed = parseAnonForm(fd, !hasProvider);
+  if (!parsed.data) return { error: parsed.error, fieldErrors: parsed.fieldErrors };
+  const { name, phone, service } = parsed.data;
+
+  const admin = createAdminClient();
+  const ipHash = await visitorIpHash();
+  if (!user) {
+    const since = new Date(Date.now() - 86_400_000).toISOString();
+    const { count } = await admin
+      .from("recommendations")
+      .select("id", { count: "exact", head: true })
+      .eq("anon_ip_hash", ipHash)
+      .gte("created_at", since);
+    if ((count ?? 0) >= ANON_RECS_PER_DAY) {
+      return { error: "今天推荐得有点多了，谢谢你！明天再来，或者登录后继续推荐。" };
+    }
+  } else {
+    await ensureUserRow(user);
+  }
+
+  const loc = await getVisitorLocation();
+  const findByPhone = () => admin.from("providers").select("id, status, owner_user_id").eq("phone", phone).maybeSingle();
+  let provider: { id: string; status: string; owner_user_id: string | null } | null = null;
+  if (hasProvider) {
+    const { data } = await admin.from("providers").select("id, status, owner_user_id").eq("id", givenProviderId).maybeSingle();
+    provider = data;
+    if (!provider || !["active", "paused"].includes(provider.status)) return { error: "没找到这个商家" };
+  } else {
+    provider = (await findByPhone()).data;
+    if (!provider) {
+      const category = guessCategory(`${name} ${service}`);
+      const { data: created, error } = await admin
+        .from("providers")
+        .insert({
+          name,
+          phone,
+          category,
+          categories: [category],
+          custom_service: category === OTHER_CATEGORY ? customServiceFrom(service) : null,
+          city_id: loc.city.id,
+          service_areas: loc.area ? [loc.area] : [],
+          status: "pending",
+          source: "neighbor_anonymous",
+          submitted_by_user_id: user?.id ?? null,
+        })
+        .select("id, status, owner_user_id")
+        .single();
+      if (error?.code === "23505") provider = (await findByPhone()).data; // 同时有人登记了同一个电话
+      else if (error) return { error: dbErrorMessage("submitAnonRecommendation", error) };
+      else provider = created;
+    }
+  }
+  if (!provider) return { error: "提交没有成功，请再试一次" };
+  // 被站长隐藏的商家：不再收推荐，但也不告诉对方（免得被用来试探）
+  if (provider.status === "hidden") done();
+  if (user && provider.owner_user_id === user.id) return { error: "商家不能给自己写推荐" };
+
+  const area = loc.area ?? loc.city.zh;
+  const rec = { recommender_area: area, comment: service, service_item: null, cost_approx: null, status: "pending" };
+  if (user) {
+    const { error } = await admin
+      .from("recommendations")
+      .upsert({ provider_id: provider.id, user_id: user.id, ...rec }, { onConflict: "provider_id,user_id" });
+    if (error) return { error: dbErrorMessage("submitAnonRecommendation.rec", error) };
+  } else {
+    const store = await cookies();
+    // 同一个人（同一 IP）给同一位师傅再推荐一次：改原来那条，不重复计数
+    const { data: mine } = await admin
+      .from("recommendations")
+      .select("id")
+      .eq("provider_id", provider.id)
+      .eq("anon_ip_hash", ipHash)
+      .is("user_id", null)
+      .maybeSingle();
+    const token = newClaimToken();
+    const row = { ...rec, claim_token_hash: hashClaimToken(token) };
+    const { error } = mine
+      ? await admin.from("recommendations").update(row).eq("id", mine.id)
+      : await admin.from("recommendations").insert({ provider_id: provider.id, user_id: null, anon_ip_hash: ipHash, ...row });
+    if (error) return { error: dbErrorMessage("submitAnonRecommendation.rec", error) };
+    store.set(ANON_CLAIM_COOKIE, addClaimToken(store.get(ANON_CLAIM_COOKIE)?.value, token), {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 180,
+      path: "/",
+    });
+  }
+  revalidatePath(`/provider/${provider.id}`);
+  done(provider.id);
 }

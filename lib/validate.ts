@@ -67,6 +67,12 @@ export function validateField(name: string, fd: FormData): string | null {
       return v("recommender_area") ? null : "请选择你住的片区";
     case "comment":
       return v("comment").length >= 5 ? null : "推荐理由至少写一句具体的事（修了什么、多少钱、多快）";
+    // 匿名快速推荐的“服务内容”：做什么 + 一句推荐
+    case "service": {
+      const s = v("service");
+      if (s.length < 2) return "请写一下他做什么，比如：修空调，上门快、价格公道";
+      return LINK.test(s) ? "这里不要放网址链接" : null;
+    }
     case "contact_note":
       return v("contact_note").length >= 2 ? null : "请留一个站长能联系到你的方式（微信号或方便的时间）";
     case "avatar":
