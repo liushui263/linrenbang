@@ -10,6 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ANON_CLAIM_COOKIE,
   ANON_RECS_PER_DAY,
+  CONTACT_IMAGE_MAX_BYTES,
   HONEYPOT_FIELD,
   addClaimToken,
   customServiceFrom,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/anon-recommend";
 import { hashClaimToken, newClaimToken, visitorIpHash } from "@/lib/anon-server";
 import { getVisitorLocation } from "@/lib/location";
+import { uploadImage } from "@/lib/uploads";
 import { OTHER_CATEGORY } from "@/constants/categories";
 
 export type FormState =
@@ -148,7 +150,8 @@ export async function submitAnonRecommendation(_prev: FormState, fd: FormData): 
   const hasProvider = /^[0-9a-f-]{36}$/i.test(givenProviderId);
   const parsed = parseAnonForm(fd, !hasProvider);
   if (!parsed.data) return { error: parsed.error, fieldErrors: parsed.fieldErrors };
-  const { name, phone, service } = parsed.data;
+  const { name, contact, service } = parsed.data;
+  const { phone } = contact;
 
   const admin = createAdminClient();
   const ipHash = await visitorIpHash();
@@ -167,21 +170,47 @@ export async function submitAnonRecommendation(_prev: FormState, fd: FormData): 
   }
 
   const loc = await getVisitorLocation();
-  const findByPhone = () => admin.from("providers").select("id, status, owner_user_id").eq("phone", phone).maybeSingle();
+  // 查重：有电话按电话（全站唯一）；只有微信号就按微信号
+  const findExisting = async () => {
+    if (phone) return (await admin.from("providers").select("id, status, owner_user_id").eq("phone", phone).maybeSingle()).data;
+    if (contact.wechat) {
+      const { data } = await admin.from("providers").select("id, status, owner_user_id").eq("wechat_id", contact.wechat).limit(1);
+      return data?.[0] ?? null;
+    }
+    return null;
+  };
   let provider: { id: string; status: string; owner_user_id: string | null } | null = null;
   if (hasProvider) {
     const { data } = await admin.from("providers").select("id, status, owner_user_id").eq("id", givenProviderId).maybeSingle();
     provider = data;
     if (!provider || !["active", "paused"].includes(provider.status)) return { error: "没找到这个商家" };
   } else {
-    provider = (await findByPhone()).data;
+    provider = await findExisting();
     if (!provider) {
+      // 名片 / 广告截图 / 二维码：浏览器里已经压缩过，这里再卡一下大小
+      let contactImage: string | null = null;
+      const file = fd.get("contact_image");
+      if (file && typeof file !== "string" && file.size > 0) {
+        if (file.size > CONTACT_IMAGE_MAX_BYTES) return { fieldErrors: { contact: "图片太大了，请重新选一次" } };
+        const up = await uploadImage(file, "avatars", "contact");
+        if (up.error) return { fieldErrors: { contact: up.error } };
+        contactImage = up.value ?? null;
+      }
+      if (!phone && !contact.wechat && !contact.note && !contactImage) {
+        return { fieldErrors: { contact: "请留一个能找到他的方式：电话、微信、邮箱、网址，或者传一张名片/广告截图" } };
+      }
       const category = guessCategory(`${name} ${service}`);
+      const contact_methods = [...(phone ? ["phone", "sms"] : []), ...(contact.wechat ? ["wechat"] : [])];
       const { data: created, error } = await admin
         .from("providers")
         .insert({
           name,
           phone,
+          wechat_id: contact.wechat,
+          contact_note: contact.note,
+          contact_image_url: contactImage,
+          contact_methods,
+          contact_pref: contact_methods[0] ?? "phone",
           category,
           categories: [category],
           custom_service: category === OTHER_CATEGORY ? customServiceFrom(service) : null,
@@ -193,7 +222,7 @@ export async function submitAnonRecommendation(_prev: FormState, fd: FormData): 
         })
         .select("id, status, owner_user_id")
         .single();
-      if (error?.code === "23505") provider = (await findByPhone()).data; // 同时有人登记了同一个电话
+      if (error?.code === "23505") provider = await findExisting(); // 同时有人登记了同一个电话
       else if (error) return { error: dbErrorMessage("submitAnonRecommendation", error) };
       else provider = created;
     }

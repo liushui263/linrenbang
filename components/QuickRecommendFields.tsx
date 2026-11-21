@@ -1,5 +1,6 @@
 import { HONEYPOT_FIELD } from "@/lib/anon-recommend";
 import { FieldError } from "./ActionForm";
+import ContactImagePicker from "./ContactImagePicker";
 
 const input = "w-full rounded-xl border border-gray-300 bg-white px-3 py-2";
 const label = "block text-sm font-medium text-gray-700";
@@ -15,18 +16,18 @@ export default function QuickRecommendFields({ withProvider = true, phone }: { w
             <input name="name" required maxLength={60} className={input} placeholder="如：王师傅 / 老王空调" />
             <FieldError name="name" />
           </div>
-          <div>
-            <label className={label}>电话 *</label>
+          <div className="space-y-2">
+            <label className={label}>怎么找到他 *</label>
             <input
-              name="phone"
-              required
-              inputMode="tel"
+              name="contact"
+              maxLength={200}
               defaultValue={phone ?? ""}
               className={input}
-              placeholder="(713) 555-0123"
+              placeholder="电话、微信号、邮箱或网址，填一个就行"
             />
-            <FieldError name="phone" />
-            <p className="mt-1 text-xs text-gray-500">网站上已经有这位师傅的话，会自动算到他名下，不会重复登记。</p>
+            <ContactImagePicker />
+            <FieldError name="contact" />
+            <p className="text-xs text-gray-500">群里看到的广告、名片，截图传上来就行。有电话的话，网站上已有这位师傅会自动算到他名下。</p>
           </div>
         </>
       )}

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: "not_found" }, { status: 404, headers: noStore });
 
   const admin = createAdminClient();
-  const { data: p } = await admin.from("providers").select("id, status, phone, wechat_id, contact_methods").eq("id", id).maybeSingle();
+  const { data: p } = await admin.from("providers").select("id, status, phone, wechat_id, contact_methods, contact_note, contact_image_url").eq("id", id).maybeSingle();
   if (!p || (p.status !== "active" && p.status !== "paused")) {
     return NextResponse.json({ error: "not_found" }, { status: 404, headers: noStore });
   }
@@ -41,5 +41,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const methods: string[] = p.contact_methods ?? ["phone", "sms"];
   const phone = methods.includes("phone") || methods.includes("sms") ? p.phone : null;
   const wechat_id = methods.includes("wechat") ? p.wechat_id || null : null;
-  return NextResponse.json({ phone, wechat_id }, { headers: noStore });
+  // 邻居推荐时留的其他联系方式（微信 / 邮箱 / 网址原文、名片或广告截图）
+  return NextResponse.json(
+    { phone, wechat_id, contact_note: p.contact_note ?? null, contact_image_url: p.contact_image_url ?? null },
+    { headers: noStore },
+  );
 }

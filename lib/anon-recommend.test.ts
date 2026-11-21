@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addClaimToken, customServiceFrom, guessCategory, parseAnonForm, readClaimTokens, showAnonMark } from "./anon-recommend";
+import { addClaimToken, customServiceFrom, guessCategory, parseAnonForm, parseContact, readClaimTokens, showAnonMark } from "./anon-recommend";
 
 const fd = (o: Record<string, string>) => {
   const f = new FormData();
@@ -8,20 +8,36 @@ const fd = (o: Record<string, string>) => {
 };
 
 describe("parseAnonForm", () => {
-  it("只要名字、电话、服务内容", () => {
-    const r = parseAnonForm(fd({ name: "王师傅", phone: "(713) 555-0123", service: "修空调，上门快" }));
-    expect(r.data).toEqual({ name: "王师傅", phone: "+17135550123", service: "修空调，上门快" });
+  it("名字、联系方式、服务内容", () => {
+    const r = parseAnonForm(fd({ name: "王师傅", contact: "(713) 555-0123", service: "修空调，上门快" }));
+    expect(r.data).toEqual({ name: "王师傅", contact: { phone: "+17135550123", wechat: null, note: null }, service: "修空调，上门快" });
   });
   it("缺项报字段错误", () => {
-    const r = parseAnonForm(fd({ name: "", phone: "123", service: "" }));
-    expect(Object.keys(r.fieldErrors ?? {}).sort()).toEqual(["name", "phone", "service"]);
+    const r = parseAnonForm(fd({ name: "", contact: "", service: "" }));
+    expect(Object.keys(r.fieldErrors ?? {}).sort()).toEqual(["contact", "name", "service"]);
+  });
+  it("只传了图片也算有联系方式", () => {
+    expect(parseAnonForm(fd({ name: "a", contact: "", contact_image_set: "1", service: "修空调" })).data).toBeTruthy();
   });
   it("给已有商家推荐时只要服务内容", () => {
     expect(parseAnonForm(fd({ service: "换热水器" }), false).data?.service).toBe("换热水器");
   });
   it("服务内容不能放网址", () => {
-    expect(parseAnonForm(fd({ name: "a", phone: "7135550123", service: "看 www.x.com" })).fieldErrors?.service).toBeTruthy();
+    expect(parseAnonForm(fd({ name: "a", contact: "7135550123", service: "看 www.x.com" })).fieldErrors?.service).toBeTruthy();
   });
+});
+
+describe("parseContact", () => {
+  it.each([
+    ["713-555-0123", { phone: "+17135550123", wechat: null, note: null }],
+    ["电话 7135550123", { phone: "+17135550123", wechat: null, note: null }],
+    ["wangshifu88", { phone: null, wechat: "wangshifu88", note: null }],
+    ["微信：wangshifu88", { phone: null, wechat: "wangshifu88", note: null }],
+    ["wang@gmail.com", { phone: null, wechat: null, note: "wang@gmail.com" }],
+    ["https://abc.com/ac", { phone: null, wechat: null, note: "https://abc.com/ac" }],
+    ["832 555 0101 微信 laowang_ac", { phone: "+18325550101", wechat: "laowang_ac", note: null }],
+    ["找群主要", { phone: null, wechat: null, note: "找群主要" }],
+  ])("%s", (raw, want) => expect(parseContact(raw)).toEqual(want));
 });
 
 describe("guessCategory", () => {

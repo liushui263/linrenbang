@@ -85,7 +85,7 @@ npm run lint && npm run typecheck
 | 邻居求推荐 | `/ask`、`/ask/new`、`/ask/[id]`、`lib/asks.ts`、迁移 `0004_ask_board.sql` | 邻居发“求推荐”，回答 = 推荐一位具体师傅（已有的或新加的）。发帖/回答要 Google 登录；先发后管（举报 + 后台“最近 3 天的求推荐”隐藏）；勾“我自己找他做过”的回答另生成一条待审核推荐，通过后才算进推荐数；发帖人可关闭，已关闭的 30 天后从列表收起 |
 | 推荐有回音 | `app/api/providers/[id]/event`、`components/RecommenderImpact.tsx`、`0006_recommender_impact.sql` | 详情页查看、一键拨号、复制微信各记一次（只存哈希，每人每天每种只算 1 次，商家本人和推荐人自己不算）；“我的”页面显示“你推荐的 XX，最近 7 天被 N 位邻居查看、M 位拨打”，可转发微信 |
 | 联系方式偏好（13.8） | `components/ContactButtons.tsx`、`components/ProviderFields.tsx`、迁移 `0007_contact_pref.sql` | 商家选打电话 / 发短信 / 加微信（可多选）和最希望的一种；名片上偏好的排第一 |
-| 匿名快速推荐（冷启动） | `app/recommend/page.tsx`、`components/QuickRecommendFields.tsx`、`lib/anon-recommend.ts`、`app/recommend/claim/route.ts`、迁移 `0008_anonymous_recommend.sql` | 不登录也能推荐：只填名字 / 电话 / 服务内容；按电话查重；隐藏输入框 + 同 IP 每天 5 条防刷；仍需站长审核；全是匿名推荐的名片显示灰色小字“匿名推荐”，有登录邻居推荐后自动消失；提交后可转发、可登录认领 |
+| 匿名快速推荐（冷启动） | `app/recommend/page.tsx`、`components/QuickRecommendFields.tsx`、`lib/anon-recommend.ts`、`app/recommend/claim/route.ts`、迁移 `0008_anonymous_recommend.sql`、`0009_flexible_contact.sql` | 不登录也能推荐：只填名字 / 联系方式（电话、微信、邮箱、网址或一张名片/广告截图，压缩到约 100KB）/ 服务内容；有电话按电话查重；隐藏输入框 + 同 IP 每天 5 条防刷；仍需站长审核；全是匿名推荐的名片显示灰色小字“匿名推荐”，有登录邻居推荐后自动消失；提交后可转发、可登录认领 |
 | 电话微信防爬（13.6） | `app/api/providers/[id]/contact`、SQL 列权限 | 页面源码里没有电话和微信；前端 anon key 读不到这两列；点按钮才取，同一 IP 每小时最多 30 次 |
 | 季节提醒 | `constants/seasonal.ts`（站长直接改）、`/season/[id]` | 按芝加哥月份自动上首页；每条有分享页、微信分享卡片图（`opengraph-image`）和可长按保存的竖版海报（`/season/{id}/poster.png`），图上只有师傅名字不含电话 |
 

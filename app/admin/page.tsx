@@ -102,7 +102,7 @@ export default async function AdminPage() {
   const [providers, recs, reports, claims, foundingCount, others, asks, answers, anonRecs] = await Promise.all([
     admin
       .from("providers")
-      .select("id, name, category, categories, custom_service, city_id, phone, wechat_id, contact_methods, contact_pref, service_areas, tagline, description, source, price_note, created_at")
+      .select("id, name, category, categories, custom_service, city_id, phone, wechat_id, contact_note, contact_image_url, contact_methods, contact_pref, service_areas, tagline, description, source, price_note, created_at")
       .eq("status", "pending")
       .order("created_at"),
     admin
@@ -189,11 +189,18 @@ export default async function AdminPage() {
                 {p.source === "neighbor_anonymous" && <span className="ml-2 text-xs text-gray-500">匿名推荐新加</span>}
               </div>
               <div className="text-gray-600">
-                {formatUsPhone(p.phone)} {p.wechat_id && `· 微信 ${p.wechat_id}`} · {formatServiceAreas(p.city_id, p.service_areas)}
+                {p.phone && formatUsPhone(p.phone)} {p.wechat_id && `· 微信 ${p.wechat_id}`} · {formatServiceAreas(p.city_id, p.service_areas)}
                 <br />
                 联系：{CONTACT_METHODS.filter((m) => p.contact_methods?.includes(m.id)).map((m) => m.zh).join(" / ")}
                 {p.contact_pref && ` · ${CONTACT_METHODS.find((m) => m.id === p.contact_pref)?.pref ?? ""}`}
               </div>
+              {p.contact_note && <div className="text-gray-600">邻居留的联系方式：{p.contact_note}</div>}
+              {p.contact_image_url && (
+                <a href={p.contact_image_url} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.contact_image_url} alt="联系方式图片" className="mt-1 max-h-48 rounded-lg border object-contain" />
+                </a>
+              )}
               {p.tagline && <div className="text-gray-600">{p.tagline}</div>}
               {p.description && <div className="text-gray-500">{p.description}</div>}
               {p.price_note && <div className="text-gray-400">{p.price_note}</div>}

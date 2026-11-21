@@ -9,23 +9,56 @@ export const ANON_RECS_PER_DAY = 5;
 export const ANON_CLAIM_COOKIE = "lrb_anon_recs";
 /** cookie 里最多存几个认领码 */
 export const ANON_CLAIM_MAX = 20;
+/** 联系方式图片：浏览器里压到长边 1000px、约 100KB；服务端最多收 300KB */
+export const CONTACT_IMAGE_MAX_SIDE = 1000;
+export const CONTACT_IMAGE_TARGET_BYTES = 100 * 1024;
+export const CONTACT_IMAGE_MAX_BYTES = 300 * 1024;
 /** 防机器人：表单里藏一个真人看不到的输入框，填了就是机器人 */
 export const HONEYPOT_FIELD = "website";
 
+export interface AnonContact {
+  /** 联系方式里认出来的美国电话（E.164），用来查重 */
+  phone: string | null;
+  /** 只填了一个微信号时 */
+  wechat: string | null;
+  /** 推荐人填的原文（电话以外的部分：微信 / 邮箱 / 网址等） */
+  note: string | null;
+}
+
 export interface AnonRecommendInput {
   name: string;
-  phone: string;
+  contact: AnonContact;
   service: string;
 }
 
 const str = (fd: FormData, k: string, max: number) => String(fd.get(k) ?? "").trim().slice(0, max);
 
+const PHONE_RE = /(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/;
+const WECHAT_RE = /^(?:微信|wechat|vx|wx)?[:：\s]*([A-Za-z][A-Za-z0-9_-]{5,19})$/i;
+
+/** 把“联系方式”一栏拆开：认出电话（查重用）、单独的微信号；其余原样留着给邻居看 */
+export function parseContact(raw: string): AnonContact {
+  const text = raw.trim().slice(0, 200);
+  const m = text.match(PHONE_RE);
+  const phone = m ? toE164(m[0]) : null;
+  const rest = (phone && m ? text.replace(m[0], " ") : text).replace(/^[\s,，;；/、|]+|[\s,，;；/、|]+$/g, "").trim();
+  const isEmailOrUrl = /@|https?:\/\/|www\.|\.(com|net|org|us)\b/i.test(rest);
+  const w = !isEmailOrUrl ? rest.match(WECHAT_RE) : null;
+  return {
+    phone,
+    wechat: w ? w[1] : null,
+    note: rest && !w && !/^(电话|手机|tel|phone|cell)[:：\s]*$/i.test(rest) ? rest : null,
+  };
+}
+
+/** 有没有选联系方式图片（表单里的图片组件会放一个 contact_image_set=1） */
+export const hasContactImage = (fd: FormData) => fd.get("contact_image_set") === "1";
+
 export function parseAnonForm(fd: FormData, needProvider = true): { data?: AnonRecommendInput; error?: string; fieldErrors?: FieldErrors } {
-  const fieldErrors = validateForm(fd, [...(needProvider ? ["name", "phone"] : []), "service"]);
+  const fieldErrors = validateForm(fd, [...(needProvider ? ["name", "contact"] : []), "service"]);
   if (Object.keys(fieldErrors).length) return { error: "有几项需要改一下，见红字", fieldErrors };
-  const phone = needProvider ? toE164(String(fd.get("phone") ?? "")) : "";
-  if (needProvider && !phone) return { fieldErrors: { phone: "请填 10 位美国电话，例如 (713) 555-0123" } };
-  return { data: { name: str(fd, "name", 60), phone: phone ?? "", service: str(fd, "service", 300) } };
+  const contact = needProvider ? parseContact(String(fd.get("contact") ?? "")) : { phone: null, wechat: null, note: null };
+  return { data: { name: str(fd, "name", 60), contact, service: str(fd, "service", 300) } };
 }
 
 /** 服务内容里的关键词 → 分类。猜不出来就归“其他服务”，站长审核时可以改 */

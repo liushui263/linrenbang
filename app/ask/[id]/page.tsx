@@ -103,6 +103,7 @@ function ProviderAnswer({ g, visitorArea, chosen }: { g: AnswerGroup; visitorAre
             methods={p.contact_methods}
             pref={p.contact_pref}
             hasWechat={p.has_wechat}
+            hasExtra={!!p.has_contact_extra}
             paused={p.status === "paused"}
           />
         </div>
