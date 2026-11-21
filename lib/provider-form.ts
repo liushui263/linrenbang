@@ -1,5 +1,5 @@
 import { CATEGORY_IDS, LANGUAGES, MAX_CATEGORIES, OTHER_CATEGORY } from "@/constants/categories";
-import { CITIES } from "@/constants/cities";
+import { CITIES, cleanServiceAreas } from "@/constants/cities";
 import { CONTACT_METHOD_IDS, type ContactMethod } from "@/constants/site";
 import { toE164 } from "@/lib/phone";
 import { selectedCategories, validateForm, type FieldErrors } from "@/lib/validate";
@@ -61,7 +61,7 @@ export function parseProviderForm(
   const city_id = String(fd.get("city_id") ?? "houston");
   const city = CITIES.find((c) => c.id === city_id && c.status === "live");
   if (!city) return { error: "服务城市还没开通" };
-  const service_areas = fd.getAll("service_areas").map(String).filter((a) => city.areas.includes(a));
+  const service_areas = cleanServiceAreas(city, fd.getAll("service_areas").map(String));
   if (service_areas.length === 0) return { error: "请至少选一个覆盖片区" };
 
   let phone = "";

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CATEGORY_IDS, OTHER_CATEGORY } from "@/constants/categories";
-import { CITIES } from "@/constants/cities";
+import { CITIES, cleanServiceAreas } from "@/constants/cities";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -34,7 +34,7 @@ export async function approveProvider(fd: FormData) {
     const category = String(fd.get("category") ?? "");
     const { data: p } = await admin.from("providers").select("city_id, custom_service").eq("id", id).single();
     const city = CITIES.find((c) => c.id === p?.city_id);
-    const areas = fd.getAll("service_areas").map(String).filter((a) => city?.areas.includes(a));
+    const areas = cleanServiceAreas(city, fd.getAll("service_areas").map(String));
     const custom = String(fd.get("custom_service") ?? "").trim().slice(0, 12);
     if (CATEGORY_IDS.includes(category)) {
       const { error } = await admin
