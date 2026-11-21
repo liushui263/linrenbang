@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AreaSelect from "@/components/AreaSelect";
+import HeroActions from "@/components/HeroActions";
 import { AskRow } from "@/components/AskCard";
 import ProviderCard from "@/components/ProviderCard";
 import RankedList from "@/components/RankedList";
@@ -278,6 +279,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             d="M0 40 V28 L20 14 L40 28 V22 L62 6 L84 22 V30 L100 18 L116 30 V24 L140 8 L164 24 V32 L180 20 L196 32 V26 L220 10 L244 26 V30 L262 16 L280 30 V22 L304 6 L328 22 V30 L346 18 L364 30 V24 L382 12 L400 24 V40 Z"
           />
         </svg>
+        <HeroActions hasShop={!!myShop} />
         <div className="relative">
           <h1 className="sr-only">
             {SITE_NAME} {SITE_NAME_EN} · {SITE_SLOGAN_EN}
