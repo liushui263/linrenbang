@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { providerCategoryLabel, providerCategoryLabels } from "@/constants/categories";
 import { formatServiceAreas } from "@/constants/cities";
+import { showAnonMark } from "@/lib/anon-recommend";
 import { foundingDaysLeft, isFoundingActive } from "@/lib/rotation";
 import type { PublicProvider } from "@/lib/types";
 import ContactButtons from "./ContactButtons";
@@ -23,6 +24,12 @@ export default function ProviderCard({ provider: p, isTodayPick, newKind, expand
   const founding = isFoundingActive(p.founding_expires_at);
   const summary = p.tagline || (p.description ? p.description.slice(0, 60) : "");
   const tags = expanded ? p.sub_tags : p.sub_tags.slice(0, 3);
+  // 不太显眼的小标志：推荐全是匿名的；有一位登录邻居的推荐通过后自动消失
+  const anonMark = showAnonMark(p) && (
+    <span className="text-xs text-gray-400" title="推荐来自没有登录的邻居，还没有登录邻居推荐过">
+      匿名推荐
+    </span>
+  );
 
   /* 详情页（expanded）版式 —— 1. 头像 + 名字 + 分类徽章（右边是分享按钮，放在外面，不跟着整块链接走） */
   const titleRow = (
@@ -53,6 +60,7 @@ export default function ProviderCard({ provider: p, isTodayPick, newKind, expand
       {/* 2. 推荐数 + 角标 + 执照文案 */}
       <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
         <span className="font-semibold text-orange-600">🔥 {p.recommend_count}位邻居推荐</span>
+        {anonMark}
         {founding && p.founding_rank && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
             创始商家 #{p.founding_rank} · 还剩 {foundingDaysLeft(p.founding_expires_at)} 天
@@ -114,6 +122,7 @@ export default function ProviderCard({ provider: p, isTodayPick, newKind, expand
         ) : (
           <span className="text-sm text-gray-500">还没有邻居推荐</span>
         )}
+        {anonMark}
         {newKind && (
           <span className="rounded-full bg-orange-100 px-1.5 py-0.5 font-medium text-orange-700">
             {newKind === "joined" ? "新加入" : "新推荐"}
@@ -163,6 +172,7 @@ export default function ProviderCard({ provider: p, isTodayPick, newKind, expand
             methods={p.contact_methods}
             pref={p.contact_pref}
             hasWechat={p.has_wechat}
+            hasExtra={!!p.has_contact_extra}
             paused={p.status === "paused"}
             compact
           />
@@ -196,6 +206,7 @@ export default function ProviderCard({ provider: p, isTodayPick, newKind, expand
           methods={p.contact_methods}
           pref={p.contact_pref}
           hasWechat={p.has_wechat}
+          hasExtra={!!p.has_contact_extra}
           paused={p.status === "paused"}
         />
       </div>

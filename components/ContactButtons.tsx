@@ -11,24 +11,51 @@ interface Props {
   methods?: ContactMethod[];
   pref?: ContactMethod;
   hasWechat: boolean;
+  /** 邻居推荐时留了其他联系方式（微信 / 邮箱 / 网址 / 名片截图） */
+  hasExtra?: boolean;
   paused: boolean;
   /** 列表里的紧凑版：按钮矮一点 */
   compact?: boolean;
 }
 
-type Contact = { phone: string | null; wechat_id: string | null };
+type Contact = { phone: string | null; wechat_id: string | null; contact_note?: string | null; contact_image_url?: string | null };
+
+/** 联系方式原文里的网址、邮箱变成能点的链接 */
+function Linkified({ text }: { text: string }) {
+  const parts = text.split(/((?:https?:\/\/|www\.)[^\s，,]+|[\w.+-]+@[\w-]+\.[\w.]+)/g);
+  return (
+    <>
+      {parts.map((s, i) => {
+        if (/@/.test(s) && /^[\w.+-]+@[\w-]+\.[\w.]+$/.test(s))
+          return (
+            <a key={i} href={`mailto:${s}`} className="text-emerald-700 underline">
+              {s}
+            </a>
+          );
+        if (/^(https?:\/\/|www\.)/.test(s))
+          return (
+            <a key={i} href={s.startsWith("www.") ? `https://${s}` : s} target="_blank" rel="noopener noreferrer nofollow" className="break-all text-emerald-700 underline">
+              {s}
+            </a>
+          );
+        return <span key={i}>{s}</span>;
+      })}
+    </>
+  );
+}
 
 /**
  * 13.6：电话和微信不在 HTML 里，点按钮才从接口取。
  * v3.4：商家选的联系方式（打电话 / 发短信 / 加微信），偏好的那个排第一、实心高亮。
  */
-export default function ContactButtons({ providerId, methods = ["phone", "sms"], pref = "phone", hasWechat, paused, compact }: Props) {
+export default function ContactButtons({ providerId, methods = ["phone", "sms"], pref = "phone", hasWechat, hasExtra, paused, compact }: Props) {
   const py = compact ? "py-2" : "py-3";
   const [contact, setContact] = useState<Contact | null>(null);
-  const [loading, setLoading] = useState<ContactMethod | null>(null);
+  const [loading, setLoading] = useState<ContactMethod | "extra" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [wechatBox, setWechatBox] = useState<string | null>(null);
   const [nowPaused, setNowPaused] = useState(paused);
+  const [extraOpen, setExtraOpen] = useState(false);
 
   const shown = CONTACT_METHODS.filter((m) => methods.includes(m.id) && (m.id !== "wechat" || hasWechat));
   const ordered = [...shown.filter((m) => m.id === pref), ...shown.filter((m) => m.id !== pref)];
@@ -91,6 +118,17 @@ export default function ContactButtons({ providerId, methods = ["phone", "sms"],
     }
   }
 
+  async function onExtra() {
+    if (extraOpen) return setExtraOpen(false);
+    setLoading("extra");
+    const c = await fetchContact();
+    setLoading(null);
+    if (c && (c.contact_note || c.contact_image_url)) {
+      trackProviderEvent(providerId, "call");
+      setExtraOpen(true);
+    }
+  }
+
   async function copyFromBox() {
     if (!wechatBox) return;
     try {
@@ -142,7 +180,36 @@ export default function ContactButtons({ providerId, methods = ["phone", "sms"],
             </button>
           );
         })}
+        {hasExtra && (
+          <button
+            onClick={onExtra}
+            disabled={loading !== null}
+            className={`flex-1 rounded-xl ${py} text-sm font-medium disabled:opacity-60 ${
+              ordered.length === 0
+                ? "bg-emerald-600 text-white active:bg-emerald-700"
+                : "border border-emerald-600 text-emerald-700 active:bg-emerald-50"
+            }`}
+          >
+            {loading === "extra" ? "获取中…" : ordered.length === 0 ? "查看联系方式" : "其他联系方式"}
+          </button>
+        )}
       </div>
+      {extraOpen && contact && (
+        <div className="mt-2 space-y-2 rounded-xl bg-gray-50 p-3 text-sm text-gray-700">
+          {contact.contact_note && (
+            <p className="whitespace-pre-wrap break-words">
+              <Linkified text={contact.contact_note} />
+            </p>
+          )}
+          {contact.contact_image_url && (
+            <a href={contact.contact_image_url} target="_blank" rel="noopener noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={contact.contact_image_url} alt="名片 / 广告截图" className="max-h-72 w-full rounded-lg border bg-white object-contain" />
+            </a>
+          )}
+          <p className="text-xs text-gray-400">邻居推荐时留的，点图片看大图。</p>
+        </div>
+      )}
       {revealed.length > 0 && <p className="mt-1.5 text-center text-xs text-gray-500">{revealed.join(" · ")}</p>}
 
       {wechatBox && (

@@ -12,8 +12,8 @@ import {
   rejectClaim,
   resolveReport,
 } from "@/app/actions/admin";
-import { providerCategories, providerCategoryLabel } from "@/constants/categories";
-import { formatServiceAreas } from "@/constants/cities";
+import { CATEGORIES, providerCategories, providerCategoryLabel } from "@/constants/categories";
+import { formatServiceAreas, getCity } from "@/constants/cities";
 import { CONTACT_METHODS } from "@/constants/site";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { formatUsPhone } from "@/lib/phone";
@@ -50,6 +50,47 @@ function Row({ id, approve, hide, approveLabel = "通过", hideLabel = "隐藏" 
   );
 }
 
+/** 匿名推荐新加的师傅：分类是按服务内容猜的，片区可能没填，通过前可以改 */
+function AnonApprove({ p }: { p: { id: string; city_id: string; category: string; custom_service: string | null; service_areas: string[] } }) {
+  const areas = getCity(p.city_id).areas;
+  return (
+    <div className="mt-2 space-y-2">
+      <form action={approveProvider} className="space-y-2 rounded-xl bg-gray-50 p-3">
+        <input type="hidden" name="id" value={p.id} />
+        <input type="hidden" name="fix_fields" value="1" />
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-xs text-gray-500">分类（按服务内容猜的）</label>
+          <select name="category" defaultValue={p.category} className="rounded-lg border border-gray-300 bg-white px-2 py-1">
+            {CATEGORIES.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.zh}
+              </option>
+            ))}
+          </select>
+          <input
+            name="custom_service"
+            maxLength={12}
+            defaultValue={p.custom_service ?? ""}
+            placeholder="选“其他服务”时的服务名"
+            className="w-40 rounded-lg border border-gray-300 bg-white px-2 py-1"
+          />
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+          <span className="text-gray-500">服务片区：</span>
+          {areas.map((a) => (
+            <label key={a} className="inline-flex items-center gap-1">
+              <input type="checkbox" name="service_areas" value={a} defaultChecked={p.service_areas.includes(a)} />
+              {a}
+            </label>
+          ))}
+        </div>
+        <button className={`${btn} bg-emerald-600 text-white`}>改好了，通过</button>
+      </form>
+      <Row id={p.id} hide={hideProvider} />
+    </div>
+  );
+}
+
 /** 第 9 节 /admin：待审核商家 / 待审核推荐 / 待处理举报 / 认领申请。白名单访问，非管理员 404 */
 export default async function AdminPage() {
   const user = await getCurrentUser();
@@ -57,15 +98,16 @@ export default async function AdminPage() {
   const admin = createAdminClient();
 
   const since = new Date(Date.now() - 3 * 86400_000).toISOString();
-  const [providers, recs, reports, claims, foundingCount, others, asks, answers] = await Promise.all([
+  const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
+  const [providers, recs, reports, claims, foundingCount, others, asks, answers, anonRecs] = await Promise.all([
     admin
       .from("providers")
-      .select("id, name, category, categories, custom_service, city_id, phone, wechat_id, contact_methods, contact_pref, service_areas, tagline, description, source, price_note, created_at")
+      .select("id, name, category, categories, custom_service, city_id, phone, wechat_id, contact_note, contact_image_url, contact_methods, contact_pref, service_areas, tagline, description, source, price_note, created_at")
       .eq("status", "pending")
       .order("created_at"),
     admin
       .from("recommendations")
-      .select("id, recommender_area, service_item, cost_approx, comment, created_at, provider_id, providers(name)")
+      .select("id, recommender_area, service_item, cost_approx, comment, created_at, provider_id, is_anonymous, providers(name, phone, status)")
       .eq("status", "pending")
       .order("created_at"),
     admin.from("reports").select("id, target_type, target_id, kind, reason, created_at").eq("status", "open").order("created_at"),
@@ -87,6 +129,13 @@ export default async function AdminPage() {
       .select("id, ask_id, comment, used_it, recommender_area, created_at, providers(name), asks(title), users(email)")
       .eq("status", "active")
       .gt("created_at", since)
+      .order("created_at", { ascending: false }),
+    admin
+      .from("recommendations")
+      .select("id, recommender_area, comment, created_at, provider_id, providers(name)")
+      .eq("status", "active")
+      .is("user_id", null)
+      .gt("created_at", weekAgo)
       .order("created_at", { ascending: false }),
   ]);
 
@@ -137,18 +186,30 @@ export default async function AdminPage() {
                 {p.name} · {providerCategoryLabel(p)}
                 {providerCategories(p).includes("other") && <span className="ml-2 rounded bg-purple-50 px-1.5 text-xs text-purple-700">其他服务</span>}
                 {p.source === "neighbor_submitted" && <span className="ml-2 text-xs text-blue-600">邻居代录入</span>}
+                {p.source === "neighbor_anonymous" && <span className="ml-2 text-xs text-gray-500">匿名推荐新加</span>}
               </div>
               <div className="text-gray-600">
-                {formatUsPhone(p.phone)} {p.wechat_id && `· 微信 ${p.wechat_id}`} · {formatServiceAreas(p.city_id, p.service_areas)}
+                {p.phone && formatUsPhone(p.phone)} {p.wechat_id && `· 微信 ${p.wechat_id}`} · {formatServiceAreas(p.city_id, p.service_areas)}
                 <br />
                 联系：{CONTACT_METHODS.filter((m) => p.contact_methods?.includes(m.id)).map((m) => m.zh).join(" / ")}
                 {p.contact_pref && ` · ${CONTACT_METHODS.find((m) => m.id === p.contact_pref)?.pref ?? ""}`}
               </div>
+              {p.contact_note && <div className="text-gray-600">邻居留的联系方式：{p.contact_note}</div>}
+              {p.contact_image_url && (
+                <a href={p.contact_image_url} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.contact_image_url} alt="联系方式图片" className="mt-1 max-h-48 rounded-lg border object-contain" />
+                </a>
+              )}
               {p.tagline && <div className="text-gray-600">{p.tagline}</div>}
               {p.description && <div className="text-gray-500">{p.description}</div>}
               {p.price_note && <div className="text-gray-400">{p.price_note}</div>}
               <div className="text-xs text-gray-400">{fmt(p.created_at)}</div>
-              <Row id={p.id} approve={approveProvider} hide={hideProvider} />
+              {p.source === "neighbor_anonymous" ? (
+                <AnonApprove p={p} />
+              ) : (
+                <Row id={p.id} approve={approveProvider} hide={hideProvider} />
+              )}
             </div>
           ))}
         </div>
@@ -163,11 +224,34 @@ export default async function AdminPage() {
               <Link href={`/provider/${r.provider_id}`} className="font-semibold text-emerald-700 underline">
                 {name(r.providers)}
               </Link>
+              {r.is_anonymous && <span className="ml-2 text-xs text-gray-500">匿名</span>}
+              {(r.providers as unknown as { status?: string } | null)?.status === "pending" && (
+                <span className="ml-2 text-xs text-amber-700">商家也在待审核</span>
+              )}
               <div className="text-gray-500">
                 {r.recommender_area} {r.service_item && `· ${r.service_item}`} {r.cost_approx && `· ${r.cost_approx}`}
               </div>
               <div>{r.comment}</div>
               <Row id={r.id} approve={approveRecommendation} hide={hideRecommendation} />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 font-semibold">最近 7 天已展示的匿名推荐（{anonRecs.data?.length ?? 0}）</h2>
+        <p className="mb-2 text-xs text-gray-500">匿名推荐不用登录就能写。看到不对的（刷单、自荐、乱写）直接隐藏，推荐数会自动减掉。</p>
+        <div className="space-y-3">
+          {anonRecs.data?.map((r) => (
+            <div key={r.id} className="rounded-2xl bg-white p-4 text-sm">
+              <Link href={`/provider/${r.provider_id}`} className="font-semibold text-emerald-700 underline">
+                {name(r.providers)}
+              </Link>
+              <div>{r.comment}</div>
+              <div className="text-xs text-gray-400">
+                {r.recommender_area} · {fmt(r.created_at)}
+              </div>
+              <Row id={r.id} hide={hideRecommendation} />
             </div>
           ))}
         </div>

@@ -56,7 +56,7 @@ export default async function ProviderPage({ params }: Props) {
     getCurrentUser().catch(() => null),
     supabase
       .from("recommendations")
-      .select("id, provider_id, recommender_area, service_item, cost_approx, comment, created_at")
+      .select("id, provider_id, recommender_area, service_item, cost_approx, comment, created_at, is_anonymous")
       .eq("provider_id", p.id)
       .eq("status", "active")
       .order("created_at", { ascending: false }),
@@ -116,6 +116,7 @@ export default async function ProviderPage({ params }: Props) {
                 <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
                   <span className="rounded-full bg-gray-100 px-2 py-0.5">{r.recommender_area} 邻居</span>
                   {sameArea(r) && <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">同片区邻居</span>}
+                  {r.is_anonymous && <span className="text-gray-400">匿名</span>}
                   <span>{new Date(r.created_at).toLocaleDateString("zh-CN", { timeZone: "America/Chicago" })}</span>
                 </div>
                 {(r.service_item || r.cost_approx) && (
@@ -143,6 +144,7 @@ export default async function ProviderPage({ params }: Props) {
           methods={p.contact_methods}
           pref={p.contact_pref}
           hasWechat={p.has_wechat}
+          hasExtra={!!p.has_contact_extra}
           paused={p.status === "paused"}
         />
         </div>

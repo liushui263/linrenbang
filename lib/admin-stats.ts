@@ -23,7 +23,8 @@ export type ProviderRow = {
 };
 export type RecRow = {
   provider_id: string;
-  user_id: string;
+  /** null = 匿名推荐 */
+  user_id: string | null;
   recommender_area: string;
   service_item: string | null;
   status: string;
@@ -183,6 +184,7 @@ export function computeStats(input: StatsInput, now: Date = new Date()): Stats {
     bump(areas, r.recommender_area.trim() || "未填");
     const item = (r.service_item ?? "").trim();
     if (item) bump(items, item);
+    if (!r.user_id) continue; // 匿名推荐不进“推荐最多的邻居”
     bump(byRecommender, r.user_id);
     recommenderArea.set(r.user_id, r.recommender_area);
   }

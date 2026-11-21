@@ -2,7 +2,7 @@ import type { ContactMethod } from "@/constants/site";
 
 /** 公开可读的商家字段（不含 phone / wechat_id，见规格 13.6） */
 export const PUBLIC_PROVIDER_COLUMNS =
-  "id, city_id, source, name, category, categories, custom_service, sub_tags, service_areas, service_zips, has_wechat, languages, avatar_url, tagline, is_licensed, license_status, is_insured, emergency_24h, price_note, description, recommend_count, is_claimed, status, is_founding, founding_rank, founding_started_at, founding_expires_at, category_rank, approved_at, created_at, contact_methods, contact_pref";
+  "id, city_id, source, name, category, categories, custom_service, sub_tags, service_areas, service_zips, has_wechat, languages, avatar_url, tagline, is_licensed, license_status, is_insured, emergency_24h, price_note, description, recommend_count, member_recommend_count, is_claimed, status, is_founding, founding_rank, founding_started_at, founding_expires_at, category_rank, approved_at, created_at, contact_methods, contact_pref, has_contact_extra";
 
 export interface PublicProvider {
   id: string;
@@ -28,6 +28,8 @@ export interface PublicProvider {
   price_note: string | null;
   description: string | null;
   recommend_count: number;
+  /** 登录邻居的有效推荐数；为 0 且有推荐 = 全是匿名推荐，名片上显示“匿名推荐”小标志 */
+  member_recommend_count: number;
   is_claimed: boolean;
   status: "pending" | "active" | "paused" | "hidden";
   is_founding: boolean;
@@ -39,6 +41,8 @@ export interface PublicProvider {
   created_at: string;
   contact_methods: ContactMethod[];
   contact_pref: ContactMethod;
+  /** 有邻居留的其他联系方式（文字或图片），名片上显示“查看联系方式” */
+  has_contact_extra?: boolean;
 }
 
 export interface PublicRecommendation {
@@ -49,4 +53,6 @@ export interface PublicRecommendation {
   cost_approx: string | null;
   comment: string;
   created_at: string;
+  /** 没登录的邻居写的 */
+  is_anonymous?: boolean;
 }

@@ -9,7 +9,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "我的", robots: { index: false } };
 
-export default async function MePage() {
+export default async function MePage({ searchParams }: { searchParams: Promise<{ claimed?: string }> }) {
+  const sp = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/me");
   const admin = createAdminClient();
@@ -35,6 +36,14 @@ export default async function MePage() {
         <h1 className="text-xl font-bold">我的</h1>
         <p className="text-sm text-gray-500">{user.email}</p>
       </div>
+
+      {sp.claimed !== undefined && (
+        <p className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800">
+          {Number(sp.claimed) > 0
+            ? `已认领 ${Number(sp.claimed)} 条推荐，谢谢你！以后在下面“我写的推荐”里就能看到。`
+            : "这个浏览器里没有找到可以认领的推荐（可能已经认领过了）。"}
+        </p>
+      )}
 
       <MyFavorites userId={user.id} />
 

@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CATEGORY_IDS, OTHER_CATEGORY } from "@/constants/categories";
+import { CITIES } from "@/constants/cities";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -27,6 +29,27 @@ const idOf = (fd: FormData) => {
 export async function approveProvider(fd: FormData) {
   const admin = await requireAdmin();
   const id = idOf(fd);
+  // 匿名推荐新加的师傅：分类是按服务内容猜的、片区可能没填，站长通过前在这里改
+  if (fd.get("fix_fields")) {
+    const category = String(fd.get("category") ?? "");
+    const { data: p } = await admin.from("providers").select("city_id, custom_service").eq("id", id).single();
+    const city = CITIES.find((c) => c.id === p?.city_id);
+    const areas = fd.getAll("service_areas").map(String).filter((a) => city?.areas.includes(a));
+    const custom = String(fd.get("custom_service") ?? "").trim().slice(0, 12);
+    if (CATEGORY_IDS.includes(category)) {
+      const { error } = await admin
+        .from("providers")
+        .update({
+          category,
+          categories: [category],
+          custom_service: category === OTHER_CATEGORY ? custom || p?.custom_service || "其他服务" : null,
+          ...(areas.length ? { service_areas: areas } : {}),
+        })
+        .eq("id", id)
+        .eq("status", "pending");
+      if (error) throw new Error(error.message);
+    }
+  }
   const { error } = await admin.rpc("approve_provider", { p_id: id });
   if (error) throw new Error(error.message);
   done(id);
