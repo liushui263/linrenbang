@@ -13,7 +13,7 @@ import {
   resolveReport,
 } from "@/app/actions/admin";
 import { CATEGORIES, providerCategories, providerCategoryLabel } from "@/constants/categories";
-import { formatServiceAreas, getCity } from "@/constants/cities";
+import { ANYWHERE_AREA, ANYWHERE_ZH, formatServiceAreas, getCity } from "@/constants/cities";
 import { CONTACT_METHODS } from "@/constants/site";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { formatUsPhone } from "@/lib/phone";
@@ -83,6 +83,10 @@ function AnonApprove({ p }: { p: { id: string; city_id: string; category: string
               {a}
             </label>
           ))}
+          <label className="inline-flex items-center gap-1">
+            <input type="checkbox" name="service_areas" value={ANYWHERE_AREA} defaultChecked={p.service_areas.includes(ANYWHERE_AREA)} />
+            {ANYWHERE_ZH}
+          </label>
         </div>
         <button className={`${btn} bg-emerald-600 text-white`}>改好了，通过</button>
       </form>

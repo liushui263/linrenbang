@@ -42,8 +42,22 @@ export function getCity(id: string | undefined | null): City {
   return CITIES.find((c) => c.id === id) ?? CITIES.find((c) => c.id === DEFAULT_CITY_ID)!;
 }
 
-/** 服务区域显示：该城市片区全选时只显示统称（如“大休斯顿地区”），否则列片区名 */
+/**
+ * 不分地点的服务（网页制作、线上课程、远程记账等）：库里 service_areas 存这个值，
+ * 访客不管选哪个片区都能看到。和片区互斥：选了它就只存它一个。
+ */
+export const ANYWHERE_AREA = "Anywhere";
+export const ANYWHERE_ZH = "不限地区（线上/远程服务）";
+
+/** 表单提交的服务区域：只留这个城市的片区；选了“不限地区”就只存它 */
+export function cleanServiceAreas(city: City | undefined | null, raw: string[]): string[] {
+  if (raw.includes(ANYWHERE_AREA)) return [ANYWHERE_AREA];
+  return raw.filter((a) => city?.areas.includes(a));
+}
+
+/** 服务区域显示：不限地区；该城市片区全选时只显示统称（如“大休斯顿地区”）；否则列片区名 */
 export function formatServiceAreas(cityId: string | undefined | null, areas: string[], sep = ", "): string {
+  if (areas.includes(ANYWHERE_AREA)) return ANYWHERE_ZH;
   const city = getCity(cityId);
   if (city.areas.length > 0 && city.areas.every((a) => areas.includes(a))) return city.metroZh;
   return areas.join(sep);

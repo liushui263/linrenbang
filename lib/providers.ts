@@ -1,6 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import { CATEGORY_IDS } from "@/constants/categories";
+import { ANYWHERE_AREA } from "@/constants/cities";
 import { NEW_PICKS_DAYS, NEW_PICKS_LIMIT, PAGE_SIZE, RANKED_MAX, ROTATION_POOL_PER_CATEGORY, TODAY_PICKS } from "@/constants/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -180,7 +181,8 @@ export async function listProviders(f: ListFilters, excludeIds: string[] = []) {
   // 商家最多 3 个分类，在每个分类下都能被找到；大类筛选 = 任一分类在这个大类里
   if (f.category) query = query.contains("categories", [f.category]);
   else if (f.categories?.length) query = query.overlaps("categories", f.categories);
-  if (f.area) query = query.contains("service_areas", [f.area]);
+  // 按片区筛选时，“不限地区”的商家也算在内
+  if (f.area) query = query.overlaps("service_areas", [f.area, ANYWHERE_AREA]);
   if (f.q) {
     // 部分匹配：商家名、服务名、标语、简介、标签、分类名、邻居推荐里的“修了什么”和评语。
     // 不支持按电话/微信搜（防爬），结果也只返回公开字段。
@@ -226,7 +228,8 @@ export async function listRanked(f: Omit<ListFilters, "q" | "page">): Promise<Ra
     .in("status", ["active", "paused"]);
   if (f.category) query = query.contains("categories", [f.category]);
   else if (f.categories?.length) query = query.overlaps("categories", f.categories);
-  if (f.area) query = query.contains("service_areas", [f.area]);
+  // 按片区筛选时，“不限地区”的商家也算在内
+  if (f.area) query = query.overlaps("service_areas", [f.area, ANYWHERE_AREA]);
   const { data } = await query
     .order("recommend_count", { ascending: false })
     .order("created_at", { ascending: false })
