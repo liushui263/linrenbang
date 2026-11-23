@@ -5,6 +5,8 @@ import { ANYWHERE_AREA } from "@/constants/cities";
 import { NEW_PICKS_DAYS, NEW_PICKS_LIMIT, PAGE_SIZE, RANKED_MAX, ROTATION_POOL_PER_CATEGORY, TODAY_PICKS } from "@/constants/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
+import { cache } from "react";
 import { chicagoDateString, chicagoDayBounds, dayIndexFor, pickDailyRotation, pickHomeRotation } from "@/lib/rotation";
 import { expandSearchTerms, matchingCategoryIds } from "@/lib/search";
 import { PUBLIC_PROVIDER_COLUMNS, type PublicProvider } from "@/lib/types";
@@ -246,12 +248,13 @@ export interface RankedProvider {
   status: string;
 }
 
-export async function getPublicProvider(id: string): Promise<PublicProvider | null> {
+/** 同一次请求里 generateMetadata 和页面都要查这家店，用 cache 只查一次 */
+export const getPublicProvider = cache(async (id: string): Promise<PublicProvider | null> => {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const supabase = await createClient();
   const { data } = await supabase.from("providers").select(PUBLIC_PROVIDER_COLUMNS).eq("id", id).maybeSingle();
   return (data as unknown as PublicProvider) ?? null;
-}
+});
 
 /** 创始名额还剩几个（第 101 名起不再发） */
 export async function foundingSlotsLeft(): Promise<number> {
@@ -270,9 +273,10 @@ export async function getMyProvider(userId: string | null | undefined): Promise<
   return data ?? null;
 }
 
-/** 季节提醒里推荐的师傅：这几个分类里正在接单（active）的，按邻居推荐数排 */
+/** 季节提醒里推荐的师傅：这几个分类里正在接单（active）的，按邻居推荐数排。
+ *  只读公开数据、不读 cookie，分享卡片图和海报才能走 CDN 缓存 */
 export async function getSeasonalPicks(cityId: string, categoryIds: string[], limit: number): Promise<PublicProvider[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data } = await supabase
     .from("providers")
     .select(PUBLIC_PROVIDER_COLUMNS)

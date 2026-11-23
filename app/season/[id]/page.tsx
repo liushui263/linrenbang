@@ -113,7 +113,7 @@ export default async function SeasonPage({ params }: Props) {
         </p>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`/season/${r.id}/poster.png`}
+          src={`/season/${r.id}/poster.png?city=${loc.city.id}`}
           alt={`${r.title}提醒图片，长按保存`}
           className="mx-auto mt-3 w-full max-w-xs rounded-xl border border-emerald-200 shadow-sm"
           loading="lazy"

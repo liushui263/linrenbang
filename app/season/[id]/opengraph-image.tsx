@@ -1,4 +1,5 @@
 import { getCity } from "@/constants/cities";
+import { SEASONAL_REMINDERS } from "@/constants/seasonal";
 import { getSeasonalPicks } from "@/lib/providers";
 import { findReminder } from "@/lib/seasonal";
 import { seasonalOgImage } from "@/lib/seasonal-image";
@@ -7,6 +8,12 @@ import { seasonalOgImage } from "@/lib/seasonal-image";
 export const alt = "邻人帮季节提醒";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+// 画图很费 CPU：每条提醒的图生成一次存起来，1 小时后才在后台重画（师傅排名变化不用秒级更新）
+export const revalidate = 3600;
+
+export function generateStaticParams() {
+  return SEASONAL_REMINDERS.map((r) => ({ id: r.id }));
+}
 
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

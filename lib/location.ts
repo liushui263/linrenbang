@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { CITY_NOTICE_COOKIE, cityForZip, getCity, isValidZip, type City } from "@/constants/cities";
 
 export const ZIP_COOKIE = "lrb_zip";
@@ -16,7 +17,7 @@ export interface VisitorLocation {
   cityNoticeDismissed: boolean; // 访客已经关掉了这个 Zip 的“没开通”提示
 }
 
-export async function getVisitorLocation(): Promise<VisitorLocation> {
+export const getVisitorLocation = cache(async (): Promise<VisitorLocation> => {
   const store = await cookies();
   const raw = store.get(ZIP_COOKIE)?.value ?? null;
   const zip = raw && isValidZip(raw) ? raw : null;
@@ -26,4 +27,4 @@ export async function getVisitorLocation(): Promise<VisitorLocation> {
   const area = areaRaw && city.areas.includes(areaRaw) ? areaRaw : null;
   const cityNoticeDismissed = !!zip && store.get(CITY_NOTICE_COOKIE)?.value === zip;
   return { zip, hasChosen: raw !== null, city, zipCity, area, cityNoticeDismissed };
-}
+});

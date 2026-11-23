@@ -45,9 +45,8 @@ function providerLine(p: PublicProvider) {
   return { name: p.name, label: providerCategoryLabel(p), count: `${p.recommend_count}位邻居推荐` };
 }
 
-// 分享卡片图用默认城市，可以走 CDN 缓存；海报按访客城市（cookie）生成，只让浏览器缓存
+// 分享卡片图和海报都不读 cookie（海报的城市在 URL 里），都走 CDN 缓存：画一次图给所有人用
 const CACHE_SHARED = { "Cache-Control": "public, max-age=600, s-maxage=3600, stale-while-revalidate=86400" };
-const CACHE_PRIVATE = { "Cache-Control": "private, max-age=600" };
 
 function ogImage(r: SeasonalReminder, picks: PublicProvider[], fonts: Fonts, withEmoji: boolean) {
   const names = picks.slice(0, 2).map((p) => p.name);
@@ -225,5 +224,5 @@ export async function seasonalPosterImage(r: SeasonalReminder, picks: PublicProv
     "季节提醒 该做什么 邻居推荐的师傅 还没有邻居推荐，你来推荐第一个 打开网址看电话 · 先看邻居推荐，再打电话",
   ].join("");
   const fonts = await fontsFor(text);
-  return renderSafely((e) => posterImage(r, picks, cityZh, fonts, e), CACHE_PRIVATE);
+  return renderSafely((e) => posterImage(r, picks, cityZh, fonts, e), CACHE_SHARED);
 }
