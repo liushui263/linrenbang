@@ -1,13 +1,15 @@
 import "server-only";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
-export async function getCurrentUser() {
+/** 同一次请求里多处要当前用户（页面、页脚、metadata），用 cache 只问一次 Supabase */
+export const getCurrentUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
-}
+});
 
 export function isAdmin(userId: string | undefined | null): boolean {
   if (!userId) return false;
